@@ -1,16 +1,27 @@
 // VisionFlow Service Worker
-// 版本: 1.0.1
+// 版本: 1.0.2
 // 功能: 離線支持、快取策略、分享功能 (修復相對路徑問題)
 
-const CACHE_NAME = 'visionflow-v1.0.1';
+const CACHE_NAME = 'visionflow-v1.0.2';
+const SCOPE = self.registration.scope; // e.g. https://cw91020251212.github.io/VisionFlow/
+const URLS = {
+  root: new URL('./', SCOPE).toString(),
+  index: new URL('./index.html', SCOPE).toString(),
+  icon: new URL('./icon.png', SCOPE).toString(),
+  icon192: new URL('./icon-192.png', SCOPE).toString(),
+  icon512: new URL('./icon-512.png', SCOPE).toString(),
+  apple: new URL('./apple-touch-icon.png', SCOPE).toString(),
+  manifest: new URL('./manifest.json', SCOPE).toString(),
+};
+
 const ASSETS_TO_CACHE = [
-  './',
-  'index.html',
-  'icon.png',
-  'icon-192.png',
-  'icon-512.png',
-  'apple-touch-icon.png',
-  'manifest.json'
+  URLS.root,
+  URLS.index,
+  URLS.icon,
+  URLS.icon192,
+  URLS.icon512,
+  URLS.apple,
+  URLS.manifest,
 ];
 
 // 安裝事件 - 快取資源
@@ -69,7 +80,7 @@ self.addEventListener('fetch', event => {
         return response;
       }).catch(() => {
         // 離線時嘗試返回快取的首頁
-        return caches.match('index.html');
+        return caches.match(URLS.index);
       });
     })
   );
