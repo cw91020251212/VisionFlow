@@ -2,12 +2,12 @@
   "name": "VisionFlow - 專業網頁視覺設計工具",
   "short_name": "VisionFlow",
   "description": "一個專業的網頁視覺設計工具，提供直觀且強大的介面，讓設計師和開發者能夠輕鬆創建和編輯網頁佈局。",
-  "start_url": "/",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#356df3",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
       "src": "icon-192.png",
@@ -44,19 +44,12 @@
     }
   ],
   "share_target": {
-    "action": "/share",
-    "method": "POST",
-    "enctype": "multipart/form-data",
+    "action": "index.html",
+    "method": "GET",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "file",
-          "accept": ["application/json", ".json"]
-        }
-      ]
+      "url": "url"
     }
   },
   "shortcuts": [
@@ -64,7 +57,7 @@
       "name": "新建設計",
       "short_name": "新建",
       "description": "開始一個新的設計專案",
-      "url": "/?action=new",
+      "url": "index.html?action=new",
       "icons": [
         {
           "src": "icon-192.png",
@@ -77,7 +70,7 @@
       "name": "匯入 HTML",
       "short_name": "匯入",
       "description": "匯入現有 HTML 檔案進行編輯",
-      "url": "/?action=import",
+      "url": "index.html?action=import",
       "icons": [
         {
           "src": "icon-192.png",
