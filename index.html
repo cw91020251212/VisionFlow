@@ -6,6 +6,7 @@
   <title>VisionFlow | 專業網頁視覺設計</title>
     <link rel="icon" href="icon.png" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
@@ -1676,6 +1677,15 @@ ${clone.outerHTML}
     }
     
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
+    
+    // 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(registration => {
+        console.log('Service Worker 已成功註冊:', registration);
+      }).catch(error => {
+        console.warn('Service Worker 註冊失敗:', error);
+      });
+    }
   </script>
 </body>
 </html>

@@ -1,0 +1,90 @@
+{
+  "name": "VisionFlow - 專業網頁視覺設計工具",
+  "short_name": "VisionFlow",
+  "description": "一個專業的網頁視覺設計工具，提供直觀且強大的介面，讓設計師和開發者能夠輕鬆創建和編輯網頁佈局。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#356df3",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "5000x5000",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "graphics"],
+  "screenshots": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["application/json", ".json"]
+        }
+      ]
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "新建設計",
+      "short_name": "新建",
+      "description": "開始一個新的設計專案",
+      "url": "/?action=new",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "匯入 HTML",
+      "short_name": "匯入",
+      "description": "匯入現有 HTML 檔案進行編輯",
+      "url": "/?action=import",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
