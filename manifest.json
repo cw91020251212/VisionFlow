@@ -2,30 +2,30 @@
   "name": "VisionFlow - 專業網頁視覺設計工具",
   "short_name": "VisionFlow",
   "description": "一個專業的網頁視覺設計工具，提供直觀且強大的介面，讓設計師和開發者能夠輕鬆創建和編輯網頁佈局。",
-  "start_url": "/VisionFlow/",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#356df3",
   "orientation": "portrait-primary",
-  "scope": "/VisionFlow/",
+  "scope": "./",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icon.png",
-      "sizes": "5000x5000",
+      "sizes": "2048x2048",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "graphics"],

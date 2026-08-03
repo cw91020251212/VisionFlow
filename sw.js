@@ -100,4 +100,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('VisionFlow Service Worker (v1.0.1) 已加載');
+console.log('VisionFlow Service Worker (v1.0.2) 已加載');
