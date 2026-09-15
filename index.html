@@ -31,237 +31,6 @@
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(53, 109, 243, .25); outline-offset: 2px; }
     
-    /* 佈局全面升級：頂部統一 48px 工具列，下方為工作區，解決遮擋問題 */
-    .app { width: 100%; height: 100dvh; display: grid; grid-template-rows: 48px minmax(0, 1fr) 28px; }
-    .main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 40; position: relative; overflow-x: auto; scrollbar-width: none; }
-    .main-toolbar::-webkit-scrollbar { display: none; }
-    
-    .brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; margin-right: 6px; }
-    .brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; color: #fff; background: var(--accent); box-shadow: 0 4px 10px rgba(53, 109, 243, .28); }
-    .toolbar-group { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-    
-    .button { border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; color: var(--text); background: var(--panel); font-size: 11px; white-space: nowrap; }
-    .button:hover { background: var(--panel-soft); }
-    .button:active { color: var(--text); background: var(--panel-soft); }
-    .button.primary { color: #fff; border-color: var(--accent); background: var(--accent); }
-    .button.primary:hover { filter: brightness(.95); }
-    
-    .icon-btn { font-size: 15px; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 28px; }
-    .icon-btn.active-tool { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(53, 109, 243, 0.2); }
-    .toolbar-divider { width: 1px; height: 16px; background: var(--line); margin: 0 4px; display: inline-block; }
-    .zoom { min-width: 44px; text-align: center; color: var(--muted); font-size: 11px; font-weight: 600; }
-    
-    .workspace { position: relative; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--inspector-width); min-width: 0; min-height: 0; overflow: hidden; transition: grid-template-columns .16s ease; }
-    .workspace.resizing { transition: none !important; }
-    .sidebar, .inspector { position: relative; z-index: 30; width: auto; height: 100%; min-width: 0; min-height: 0; padding: 8px; overflow: auto; background: var(--panel); box-shadow: 0 12px 30px rgba(23, 32, 42, .14); transition: transform .16s ease, opacity .16s ease; font-size: 11px; container-type: inline-size; }
-    .sidebar { border-right: 1px solid var(--line); }
-    .inspector { border-left: 1px solid var(--line); }
-    .panel-close-btn { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none; background: transparent; color: var(--muted); font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; z-index: 40; }
-    .panel-close-btn:hover { background: var(--panel-soft); color: var(--text); }
-    
-    .workspace.left-closed { grid-template-columns: 0 minmax(0, 1fr) var(--inspector-width); }
-    .workspace.right-closed { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0; }
-    .workspace.left-closed.right-closed { grid-template-columns: 0 minmax(0, 1fr) 0; }
-    .workspace.left-closed .sidebar { transform: translateX(-105%); opacity: 0; pointer-events: none; overflow: hidden; }
-    .workspace.right-closed .inspector { transform: translateX(105%); opacity: 0; pointer-events: none; overflow: hidden; }
-    
-    .app.focus-mode { grid-template-rows: minmax(0, 1fr); } 
-    .app.focus-mode .main-toolbar, .app.focus-mode .footer { display: none !important; }
-    #focus-exit { display: none; }
-    .app.focus-mode #focus-exit { display: inline-flex; }
-    
-    .canvas-area { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #e4e8ee; position: relative; }
-    
-    .workspace-main { display: flex; flex-direction: column; flex: 1; min-height: 0; background: #e4e8ee; position: relative; }
-    .ruler-h-container { height: 18px; display: flex; background: #fff; z-index: 10; border-bottom: 1px solid #cfd6e0; }
-    .ruler-corner { width: 18px; background: #f4f5f7; border-right: 1px solid #cfd6e0; flex-shrink: 0; display: grid; place-items: center; font-size: 8px; color: #a0abbc; user-select: none; }
-    .ruler-h { flex: 1; height: 18px; cursor: crosshair; }
-    .workspace-body { display: flex; flex: 1; min-height: 0; position: relative; }
-    .ruler-v { width: 18px; height: 100%; border-right: 1px solid #cfd6e0; background: #fff; cursor: crosshair; z-index: 10; }
-    
-    .canvas-scroll { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 14px; overscroll-behavior: contain; position: relative; }
-    .artboard-wrap { position: relative; min-width: 1px; min-height: 1px; margin: 0 auto; transition: width 0.2s, height 0.2s; }
-    /* 必須將 overflow 設為 visible，參考線先可以伸延出界 */
-    .artboard { position: relative; transform-origin: top left; border: 1px solid #c4ccd8; background: #fff; box-shadow: 0 18px 45px rgba(33, 45, 65, .16); transition: width 0.2s, height 0.2s; overflow: visible !important; }
-    .artboard.imported-board { min-width: 1px; min-height: 1px; overflow: visible !important; border-radius: 4px; }
-    .imported-frame { display: block; width: 100%; height: 100%; min-width: 1px; min-height: 1px; border: 0; background: #fff; }
-    .imported-frame.editing-frame { cursor: crosshair; }
-    
-    .section { padding: 0 0 6px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
-    .section:last-child { border-bottom: 0; }
-    .panel-title { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: #17202a; letter-spacing: .02em; display: flex; align-items: center; gap: 4px; }
-    .panel-title::before { content: ""; display: block; width: 3px; height: 10px; background: var(--accent); border-radius: 2px; }
-    .sidebar .section, .inspector .section { margin-bottom: 12px; padding-bottom: 10px; }
-    .hint, .empty { color: var(--muted); font-size: 11px; line-height: 1.4; }
-    .file-drop { padding: 6px; border: 1px dashed #b7c0cf; border-radius: 7px; color: var(--muted); background: var(--panel-soft); line-height: 1.3; }
-    .file-drop strong { display: block; margin-bottom: 4px; color: var(--text); }
-    .file-drop input { width: 100%; margin-top: 8px; font-size: 11px; }
-    .file-drop .folder-label { display: block; margin-top: 8px; text-align: center; cursor: pointer; }
-    .file-drop .folder-label input { display: none; }
-    
-    .layer-list { display: grid; gap: 2px; }
-    .layer { display: flex; align-items: center; gap: 4px; width: 100%; padding: 4px 5px; text-align: left; color: var(--text); border: 1px solid transparent; border-radius: 5px; background: transparent; font-size: 11px; overflow: hidden; }
-    .layer:hover { background: var(--panel-soft); }
-    .layer.selected { border-color: #b7c9ff; background: var(--accent-soft); }
-    .layer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .layer-icon { width: 16px; flex-shrink: 0; color: var(--muted); text-align: center; font-size: 10px; }
-    
-    .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .theme-card { min-height: 40px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; text-align: left; color: var(--theme-text); background: var(--theme-bg); }
-    .theme-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-    .theme-swatch { display: flex; gap: 2px; margin-bottom: 3px; }
-    .theme-swatch i { display: block; width: 14px; height: 6px; border-radius: 3px; background: var(--swatch); }
-    .theme-card span { font-size: 9px; font-weight: 700; }
-    
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-    .align-tools { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-    .align-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-    .align-grid .button { min-width: 0; padding: 4px 0; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
-    .align-grid .button:nth-child(7), .align-grid .button:nth-child(8) { grid-column: span 3; }
-    
-    .field { display: flex; flex-direction: column; gap: 2px; }
-    .field.full { grid-column: 1 / -1; }
-    .field label { color: var(--muted); font-size: 10px; margin: 0; }
-    .field input[type="text"], .field input[type="number"], .field textarea, .field select { width: 100%; min-width: 0; padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); background: var(--panel); font-size: 11px; }
-    .checkbox-field { display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 4px; cursor: pointer; font-weight: bold; }
-    .color-input { display: flex; gap: 4px; align-items: center; }
-    .color-input input[type=color] { width: 26px; padding: 1px; height: 23px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; }
-
-    .status { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-top: 1px solid #cfd6e0; color: var(--muted); font-size: 11px; background: rgba(255,255,255,.88); }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2eae67; }
-    .footer { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--muted); border-top: 1px solid var(--line); background: var(--panel); font-size: 10px; z-index: 10; position: relative; }
-    kbd { padding: 2px 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel-soft); font-size: 9px; }
-    
-    .app.eraser-mode .workspace-main, .app.eraser-mode .workspace-main * { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="%23ffffff" stroke="%23e6405c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>') 0 24, crosshair !important; }
-    .app.eraser-mode .demo-item { pointer-events: none !important; }
-    .app.eraser-mode .resize-handle { display: none !important; }
-    
-    .app.pan-mode .canvas-scroll, .app.pan-mode .canvas-scroll * { cursor: grab !important; }
-    .app.panning .canvas-scroll, .app.panning .canvas-scroll * { cursor: grabbing !important; }
-    
-    /* 捲尺模式保護：點擊穿透物件以精確量度 */
-    .app.measure-mode .workspace-main, .app.measure-mode .workspace-main * { cursor: crosshair !important; }
-    .app.measure-mode .demo-item { pointer-events: none !important; }
-    .app.measure-mode .resize-handle { display: none !important; }
-
-    /* 推斷鎖點系統 */
-    .snap-marker { position: absolute; z-index: 2000000; pointer-events: none; transform: translate(-50%, -50%) scale(var(--snap-inv, 1)); transform-origin: center; }
-    .snap-marker.type-intersection { width: 15px; height: 15px; }
-    .snap-marker.type-intersection::before, .snap-marker.type-intersection::after { content: ""; position: absolute; left: 50%; top: 50%; width: 17px; height: 2.6px; background: #d017c8; border-radius: 1px; box-shadow: 0 0 0 1.4px rgba(255,255,255,.95); }
-    .snap-marker.type-intersection::before { transform: translate(-50%,-50%) rotate(45deg); }
-    .snap-marker.type-intersection::after  { transform: translate(-50%,-50%) rotate(-45deg); }
-    .snap-marker.type-endpoint { width: 11px; height: 11px; background: #0fa958; box-shadow: 0 0 0 2px rgba(255,255,255,.95); border-radius: 1.5px; }
-    .snap-marker.type-midpoint { width: 10px; height: 10px; background: #06b0d4; box-shadow: 0 0 0 2px rgba(255,255,255,.95); transform: translate(-50%, -50%) scale(var(--snap-inv, 1)) rotate(45deg); }
-    .snap-marker.type-edge { width: 11px; height: 11px; border: 2.5px solid #e6405c; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
-    .snap-marker.type-grid { width: 7px; height: 7px; background: #8792a6; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(255,255,255,.85); opacity: .8; }
-    .snap-tip { position: absolute; z-index: 2000001; pointer-events: none; white-space: nowrap; font-family: Inter, sans-serif; font-size: 10.5px; font-weight: 700; color: #fff; padding: 3px 7px; border-radius: 5px; background: rgba(23,32,42,.9); box-shadow: 0 2px 8px rgba(0,0,0,.25); transform: translate(12px, 10px) scale(var(--snap-inv, 1)); transform-origin: top left; }
-    .snap-tip .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-    .snap-infer-line { position: absolute; z-index: 1999998; pointer-events: none; }
-    .snap-infer-line.vertical { width: 0; border-left: 1px dashed rgba(208,23,200,.85); }
-    .snap-infer-line.horizontal { height: 0; border-top: 1px dashed rgba(208,23,200,.85); }
-    .snap-align-line { position: absolute; z-index: 1999997; pointer-events: none; }
-    .snap-align-line.vertical { width: 0; border-left: 1px solid #356df3; }
-    .snap-align-line.horizontal { height: 0; border-top: 1px solid #356df3; }
-    .global-snap-indicator { position: absolute; width: 14px; height: 14px; background: transparent; border: 2.5px solid #e6405c; border-radius: 50%; transform: translate(-50%, -50%); z-index: 999999; pointer-events: none; display: none; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8); }
-
-    /* 捲尺工具 UI */
-    .measure-layer { position: absolute; inset: 0; pointer-events: none; z-index: 999998; }
-    .measure-line { position: absolute; height: 1.5px; background: #e6405c; transform-origin: left center; box-shadow: 0 1px 3px rgba(255,255,255,0.5); pointer-events: none; }
-    .measure-line::before, .measure-line::after { content: ""; position: absolute; width: 2px; height: 14px; background: #e6405c; top: -6.25px; box-shadow: 0 0 2px rgba(255,255,255,0.5); }
-    .measure-line::before { left: 0; } .measure-line::after { right: 0; }
-    .measure-label { position: absolute; background: #e6405c; color: #fff; padding: 4px 8px; border-radius: 6px; font-family: Inter, sans-serif; font-size: 13px; font-weight: 800; transform-origin: center; white-space: nowrap; box-shadow: 0 4px 10px rgba(230, 64, 92, 0.3); pointer-events: none; left: 50%; top: -24px; text-align: center; line-height: 1.3; border: 1px solid #fff; }
-
-    /* 參考線無限延伸 (修改 height/width 與 top/left 數值) */
-    .guide-layer { position: absolute; inset: 0 !important; z-index: 20; pointer-events: none; overflow: visible !important; width: 100% !important; height: 100% !important; }
-    .guide-line { position: absolute; background: transparent; pointer-events: none; }
-    .guide-line.vertical { top: -10000px !important; bottom: -10000px !important; height: auto !important; width: 1px; transform: none; border-left: 1px dashed rgba(230, 64, 92, .78); }
-    .guide-line.horizontal { left: -10000px !important; right: -10000px !important; width: auto !important; height: 1px; transform: none; border-top: 1px dashed rgba(230, 64, 92, .78); }
-    .guide-line.manual-guide { pointer-events: auto; background: transparent; }
-    .guide-line.manual-guide.vertical { top: -10000px !important; bottom: -10000px !important; height: auto !important; width: 1px; border-left: 1px dashed rgba(230, 64, 92, .72); cursor: ew-resize; }
-    .guide-line.manual-guide.horizontal { left: -10000px !important; right: -10000px !important; width: auto !important; height: 1px; border-top: 1px dashed rgba(230, 64, 92, .72); cursor: ns-resize; }
-    .guide-line::after { content: ""; position: absolute; z-index: 1; }
-    .guide-line.vertical::after { top: 0; bottom: 0; left: -15px; width: 31px; cursor: inherit; }
-    .guide-line.horizontal::after { left: 0; right: 0; top: -15px; height: 31px; cursor: inherit; }
-    .guide-line.manual-guide.selected-manual-guide { border-color: #356df3; }
-    .guide-line.selected-guide-line { border-color: #356df3 !important; }
-    .guide-line.snap.vertical { width: 1px; border-left: 1px solid #356df3; box-shadow: 0 0 3px rgba(53, 109, 243, 0.4); z-index: 999998; }
-    .guide-line.snap.horizontal { height: 1px; border-top: 1px solid #356df3; box-shadow: 0 0 3px rgba(53, 109, 243, 0.4); z-index: 999998; }
-    
-    .demo-item { position: absolute; user-select: none; box-sizing: border-box; }
-    .demo-item.editable { cursor: move; outline: none; outline-offset: -2px; touch-action: none; }
-    .demo-item.selected { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; }
-    .guide-copying { border-color: #17a673 !important; cursor: grabbing !important; }
-    
-    /* 預設圖形樣式 */
-    .hero { padding: 28px 30px; }
-    .hero h1 { margin: 0 0 10px; font-size: 31px; line-height: 1; }
-    .hero p { margin: 0; color: #dce6ff; font-size: 14px; line-height: 1.5; }
-    .eyebrow { margin: 0 0 8px; color: #a9c0ff; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-    .card { padding: 20px; }
-    .card .icon { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 13px; border-radius: 10px; color: #fff; }
-    .card h3 { margin: 0 0 7px; font-size: 15px; }
-    .card p { margin: 0; color: #697586; font-size: 12px; line-height: 1.5; }
-    .cta { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 18px; }
-    .cta span { font-size: 13px; font-weight: 650; }
-    .cta button { padding: 8px 13px; border: 0; border-radius: 8px; color: #17202a; background: #fff; font-weight: 750; pointer-events: none; }
-
-    .resizer { position: absolute; top: 0; bottom: 0; width: 14px; z-index: 40; cursor: ew-resize; background: transparent; touch-action: none; }
-    .resizer-left { left: -7px; } .resizer-right { right: -7px; }
-    .resizer::after { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background 0.2s; }
-    .resizer:hover::after, .resizer.active::after { background: var(--accent); }
-    .workspace.left-closed .resizer-left, .workspace.right-closed .resizer-right { pointer-events: none; opacity: 0; }
-    
-    .resize-handle { position: absolute; z-index: 100; width: 10px; height: 10px; padding: 0; border: 0; border-radius: 3px; background: var(--accent); box-shadow: 0 0 0 1.5px #fff; touch-action: none; }
-    .resize-handle.n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-    .resize-handle.s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-    .resize-handle.e { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
-    .resize-handle.w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
-    .resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
-    .resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
-    .resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-    .resize-handle.se { right: -5px; bottom: -5px; cursor: nwse-resize; }
-    .resize-handle.c { top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: move; }
-    
-    @media (max-width: 700px) { 
-      body { overflow: hidden; } 
-      .app { grid-template-rows: 48px minmax(0, 1fr) auto; } 
-      .workspace, .workspace.left-closed, .workspace.right-closed, .workspace.left-closed.right-closed { display: block; } 
-      .canvas-area { position: absolute; inset: 0; width: 100%; height: 100%; } 
-      .sidebar, .inspector { position: absolute; top: 0; bottom: 0; z-index: 30; width: min(var(--sidebar-width), 88vw); } 
-      .sidebar { left: 0; } .inspector { right: 0; } 
-      .workspace:not(.left-closed) .sidebar, .workspace:not(.right-closed) .inspector { transform: translateX(0); opacity: 1; pointer-events: auto; } 
-      .resizer { display: none; } 
-    }
-  
-    .selection-marquee { position: absolute; border: 1.5px solid var(--accent); background: rgba(53, 109, 243, 0.15); pointer-events: none; z-index: 10000; display: none; }
-    .deep-inspect-list { margin-top: 10px; padding: 8px; background: var(--accent-soft); border-radius: 6px; border: 1px solid var(--accent); }
-    .deep-inspect-item { display: flex; align-items: center; gap: 6px; padding: 4px; cursor: pointer; font-size: 11px; border-radius: 4px; }
-    .deep-inspect-item:hover { background: rgba(53, 109, 243, 0.1); }
-    .deep-inspect-item.active { background: var(--accent); color: #fff; }
-  </style>
-
-<style>
-    :root {
-      --bg: #eef1f5;
-      --panel: #ffffff;
-      --panel-soft: #f7f8fa;
-      --text: #17202a;
-      --muted: #697586;
-      --line: #d9dee7;
-      --accent: #356df3;
-      --accent-soft: #eaf0ff;
-      --danger: #c0392b;
-      --sidebar-width: 170px;
-      --inspector-width: 260px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; color-scheme: light; }
-    body { margin: 0; overflow: hidden; color: var(--text); background: var(--bg); }
-    button, input, textarea, select { font: inherit; }
-    button { cursor: pointer; }
-    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(53, 109, 243, .25); outline-offset: 2px; }
-    
     .app { width: 100%; height: 100dvh; display: grid; grid-template-rows: 48px minmax(0, 1fr) 28px; }
     .main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 40; position: relative; overflow-x: auto; scrollbar-width: none; }
     .main-toolbar::-webkit-scrollbar { display: none; }
@@ -281,6 +50,14 @@
     .toolbar-divider { width: 1px; height: 16px; background: var(--line); margin: 0 4px; display: inline-block; }
     .zoom { min-width: 44px; text-align: center; color: var(--muted); font-size: 11px; font-weight: 600; }
     
+    #shape-menu { display: none; position: fixed; z-index: 100000; background-color: var(--panel); min-width: 150px; box-shadow: 0px 12px 24px rgba(23, 32, 42, 0.15); border-radius: 8px; border: 1px solid var(--line); padding: 4px; }
+    #shape-menu a { color: var(--text); padding: 8px 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; border-radius: 4px; }
+    #shape-menu a:hover { background-color: var(--accent-soft); color: var(--accent); }
+    
+    .sys-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:24px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.25); z-index:999999; text-align:center; min-width:280px; border: 1px solid var(--line); }
+    .sys-modal-text { margin-bottom:20px; font-size:14px; font-weight:600; color:var(--text); line-height: 1.5; white-space: pre-wrap; }
+    .sys-modal-overlay { display:none; position:fixed; inset:0; background:rgba(23,32,42,0.4); z-index:999998; backdrop-filter: blur(2px); }
+
     .workspace { position: relative; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--inspector-width); min-width: 0; min-height: 0; overflow: hidden; transition: grid-template-columns .16s ease; }
     .workspace.resizing { transition: none !important; }
     .sidebar, .inspector { position: relative; z-index: 30; width: auto; height: 100%; min-width: 0; min-height: 0; padding: 8px; overflow: auto; background: var(--panel); box-shadow: 0 12px 30px rgba(23, 32, 42, .14); transition: transform .16s ease, opacity .16s ease; font-size: 11px; container-type: inline-size; }
@@ -295,13 +72,12 @@
     .workspace.left-closed .sidebar { transform: translateX(-105%); opacity: 0; pointer-events: none; overflow: hidden; }
     .workspace.right-closed .inspector { transform: translateX(105%); opacity: 0; pointer-events: none; overflow: hidden; }
     
-    .app.focus-mode { grid-template-rows: minmax(0, 1fr); } 
-    .app.focus-mode .main-toolbar, .app.focus-mode .footer { display: none !important; }
+    .app.focus-mode { grid-template-rows: 48px minmax(0, 1fr) 0px; } 
+    .app.focus-mode .footer { display: none !important; }
     #focus-exit { display: none; }
     .app.focus-mode #focus-exit { display: inline-flex; }
     
     .canvas-area { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #e4e8ee; position: relative; }
-    
     .workspace-main { display: flex; flex-direction: column; flex: 1; min-height: 0; background: #e4e8ee; position: relative; }
     .ruler-h-container { height: 18px; display: flex; background: #fff; z-index: 10; border-bottom: 1px solid #cfd6e0; }
     .ruler-corner { width: 18px; background: #f4f5f7; border-right: 1px solid #cfd6e0; flex-shrink: 0; display: grid; place-items: center; font-size: 8px; color: #a0abbc; user-select: none; }
@@ -311,7 +87,6 @@
     
     .canvas-scroll { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 14px; overscroll-behavior: contain; position: relative; }
     .artboard-wrap { position: relative; min-width: 1px; min-height: 1px; margin: 0 auto; transition: width 0.2s, height 0.2s; }
-    /* 【核心修正】取消實體 border 改用 outline，確保畫布內外座標 100% 對齊，零偏差 */
     .artboard { position: relative; transform-origin: top left; outline: 1px solid #c4ccd8; border: none; background: #fff; box-shadow: 0 18px 45px rgba(33, 45, 65, .16); transition: width 0.2s, height 0.2s; overflow: visible !important; }
     .artboard.imported-board { min-width: 1px; min-height: 1px; overflow: visible !important; border-radius: 4px; }
     .imported-frame { display: block; width: 100%; height: 100%; min-width: 1px; min-height: 1px; border: 0; background: #fff; }
@@ -373,6 +148,9 @@
     .app.measure-mode .demo-item { pointer-events: none !important; }
     .app.measure-mode .resize-handle { display: none !important; }
 
+    .app.position-locked .demo-item.editable { cursor: default !important; }
+    .app.position-locked .resize-handle.c { display: none !important; }
+
     .snap-marker { position: absolute; z-index: 2000000; pointer-events: none; transform: translate(-50%, -50%) scale(var(--snap-inv, 1)); transform-origin: center; }
     .snap-marker.type-intersection { width: 15px; height: 15px; }
     .snap-marker.type-intersection::before, .snap-marker.type-intersection::after { content: ""; position: absolute; left: 50%; top: 50%; width: 17px; height: 2.6px; background: #d017c8; border-radius: 1px; box-shadow: 0 0 0 1.4px rgba(255,255,255,.95); }
@@ -410,12 +188,14 @@
     .guide-line.horizontal::after { left: 0; right: 0; top: -15px; height: 31px; cursor: inherit; }
     .guide-line.manual-guide.selected-manual-guide { border-color: #356df3; }
     .guide-line.selected-guide-line { border-color: #356df3 !important; }
-    .guide-line.snap.vertical { width: 1px; border-left: 1px solid #356df3; box-shadow: 0 0 3px rgba(53, 109, 243, 0.4); z-index: 999998; }
-    .guide-line.snap.horizontal { height: 1px; border-top: 1px solid #356df3; box-shadow: 0 0 3px rgba(53, 109, 243, 0.4); z-index: 999998; }
     
     .demo-item { position: absolute; user-select: none; box-sizing: border-box; }
     .demo-item.editable { cursor: move; outline: none; outline-offset: -2px; touch-action: none; }
-    .demo-item.selected { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; }
+    
+    /* 普通選取 vs 群組選取 的清晰區別 */
+    .demo-item.selected { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; z-index: 15; }
+    .demo-item.selected.grouped-item { outline: 2.5px solid #d017c8 !important; outline-offset: -2.5px; z-index: 16; }
+    
     .guide-copying { border-color: #17a673 !important; cursor: grabbing !important; }
     
     .resizer { position: absolute; top: 0; bottom: 0; width: 14px; z-index: 40; cursor: ew-resize; background: transparent; touch-action: none; }
@@ -451,11 +231,15 @@
     .deep-inspect-item { display: flex; align-items: center; gap: 6px; padding: 4px; cursor: pointer; font-size: 11px; border-radius: 4px; }
     .deep-inspect-item:hover { background: rgba(53, 109, 243, 0.1); }
     .deep-inspect-item.active { background: var(--accent); color: #fff; }
+
+    .context-menu { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(23,32,42,0.2); z-index: 100000; padding: 4px; display: none; flex-direction: column; min-width: 140px; }
+    .context-menu button { background: transparent; border: none; padding: 8px 12px; text-align: left; font-size: 12px; cursor: pointer; border-radius: 4px; color: var(--text); font-weight: 500; display: flex; gap: 8px; align-items: center; }
+    .context-menu button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+    .context-menu button:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.5; }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- 主工具列：統一合併所有工具，置於畫布及面板之上 -->
     <header class="main-toolbar">
       <div class="toolbar-group">
         <div class="brand"><div class="brand-mark"><img src="icon.png" alt="V" style="width: 100%; height: 100%; border-radius: 4px; object-fit: cover;" onerror="this.style.display='none'"></div><span>VisionFlow</span></div>
@@ -463,7 +247,15 @@
         <button class="button icon-btn" id="toggle-left" title="顯示/隱藏 圖層面板">☰</button>
         <button class="button icon-btn" id="toggle-right" title="顯示/隱藏 設定面板">⚙</button>
         <div class="toolbar-divider"></div>
+        
         <button class="button icon-btn" id="edit-mode" title="開啟/關閉 編輯模式">✎</button>
+        
+        <!-- 下拉式繪圖按鈕 -->
+        <button class="button icon-btn" id="add-shape-btn" title="新增圖形/文字 (點擊展開選單)">▱ ▾</button>
+
+        <button class="button icon-btn" id="group-btn" title="群組 / 解散群組 (Ctrl+G)">🔗</button>
+
+        <button class="button icon-btn" id="lock-position" title="鎖定位置 (防誤觸，縮放時維持中心點不變)">🔒</button>
         <button class="button icon-btn" id="toggle-viewport" title="切換 電腦/手機 預覽尺寸">💻</button>
         <div class="toolbar-divider"></div>
         <button class="button icon-btn" id="toggle-guides" title="參考線 (選取物件後點擊鎖定，再點解除)">⌗</button>
@@ -490,9 +282,8 @@
       <div class="toolbar-group">
         <button class="button" id="undo">↶ 復原</button>
         <button class="button" id="redo">↷ 重做</button>
+        <button class="button" id="quick-save" style="font-weight:bold; color:#0fa958; border-color:#0fa958; background:#eafcf1;" title="即時儲存目前所有修改，防止切換頁面時遺失">💾 暫存</button>
         <button class="button" id="reset">清空畫布</button>
-        <button class="button icon-btn primary" id="export-project" title="導出專案 (JSON)">💾</button>
-        <button class="button icon-btn" id="share-project" title="分享專案">🔗</button>
         <button class="button primary" id="export">匯出 HTML</button>
       </div>
     </header>
@@ -543,9 +334,33 @@
         <div id="inspector-content" class="empty" style="margin-top: 24px;">請喺畫布點選物件以編輯屬性。</div>
       </aside>
     </main>
-    <footer class="footer"><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原。</span></footer>
+    <footer class="footer"><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原 / <kbd>Ctrl</kbd> + <kbd>G</kbd> 群組</span></footer>
   </div>
+  
   <div id="selection-marquee" class="selection-marquee"></div>
+
+  <!-- 抽離到根目錄的下拉選單，保證不被遮擋 -->
+  <div id="shape-menu">
+    <a href="#" data-shape="circle">⭕ 圓形</a>
+    <a href="#" data-shape="square">⬛ 正方形</a>
+    <a href="#" data-shape="rect">▭ 長方形</a>
+    <a href="#" data-shape="round-rect">🔲 圓角矩形</a>
+    <a href="#" data-shape="blob">🦠 不規則圓形</a>
+    <a href="#" data-shape="triangle">🔺 三角形</a>
+    <a href="#" data-shape="text">🇹 文字</a>
+  </div>
+
+  <div id="context-menu" class="context-menu">
+    <button id="ctx-group">🔗 建立群組 (Group)</button>
+    <button id="ctx-ungroup">💔 解散群組 (Ungroup)</button>
+  </div>
+
+  <!-- 系統防呆提示彈出視窗 -->
+  <div id="sys-modal" class="sys-modal">
+     <div id="sys-modal-text" class="sys-modal-text"></div>
+     <button id="sys-modal-btn" class="button primary" style="padding: 8px 24px; font-size: 13px;">明白</button>
+  </div>
+  <div id="sys-modal-overlay" class="sys-modal-overlay"></div>
 
   <script>
     function rgbToHex(colorStr) {
@@ -558,20 +373,32 @@
     function clamp(value, min, max) { return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min)); }
     function escapeHtml(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
 
-    const initialItems = [];
+    function sysAlert(text) {
+       document.getElementById('sys-modal-text').innerText = text;
+       document.getElementById('sys-modal').style.display = 'block';
+       document.getElementById('sys-modal-overlay').style.display = 'block';
+    }
+    document.getElementById('sys-modal-btn').addEventListener('click', () => {
+       document.getElementById('sys-modal').style.display = 'none';
+       document.getElementById('sys-modal-overlay').style.display = 'none';
+    });
 
+    const initialItems = [];
     const availableFonts = ['Inter', 'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Courier New', 'Verdana', 'Impact'];
     let items = structuredClone(initialItems);
     let history = []; let future = [];
     let selectedId = null; let selectedIds = [];
     let editing = false; let demoFieldDirty = false; let isTyping = false;
     let zoom = 1; let activeTheme = 'light'; let viewportMode = 'desktop';
+    let isPositionLocked = false;
     
     let importedMode = false; let importedSourceHtml = ''; let importedHtml = '';
     let importedFrame = null; let importedSelected = null; let importedSelectedElements = [];
-    let importedLayers = [];
+    let importedLayers = []; let isIframeLoaded = false;
     let importedViewport = { width: 1280, height: 720 };
     let importedDirty = false; let importedOverlay = null;
+    // 匯入頁面的群組資料：WeakMap 不會污染最後匯出的 HTML。
+    let importedGroupIds = new WeakMap(); let importedGroupSeq = 0;
     
     let guidesVisible = false; let guideMode = 'hidden'; let guideArmed = false;
     let eraserMode = false; let isErasing = false;
@@ -645,9 +472,13 @@
       } else {
         importedManualGuides.forEach(g => { if (g.kind === 'vertical') addV(g.position, -INF, INF, 'guide'); else addH(g.position, -INF, INF, 'guide'); });
         if (importedFrame?.contentDocument) {
+          const win = importedFrame.contentWindow;
+          const sx = win ? win.scrollX : 0;
+          const sy = win ? win.scrollY : 0;
           importedLayers.forEach(layer => {
             const el = layer.element; if (!el || !el.isConnected || skip.includes(el)) return;
-            const r = el.getBoundingClientRect(); if (r.width <= 0 || r.height <= 0) return; addRect(r.left, r.top, r.width, r.height);
+            const r = el.getBoundingClientRect(); if (r.width <= 0 || r.height <= 0) return; 
+            addRect(r.left + sx, r.top + sy, r.width, r.height);
           });
         }
       }
@@ -669,7 +500,6 @@
     function invalidateSnapGeometry() { _snapGeoCache = null; }
     const nearestGrid = v => Math.round(v / SNAP_CFG.gridSize) * SNAP_CFG.gridSize;
 
-    // 【核心修復】擴大交點偵測雷達範圍 (searchTol)，解決「有股力頂住吸唔到」嘅問題
     function resolveSnap(px, py, geo, opts = {}) {
       const minTier = opts.minTier ?? 0; const axis = opts.axis || null;
       const out = { x: px, y: py, snapped: false, kind: null, tier: 0, vLine: null, hLine: null, axes: '' };
@@ -677,7 +507,7 @@
       
       const lineTol = SNAP_CFG.lineTol / zoom; 
       const pointTol = SNAP_CFG.pointTol / zoom;
-      const searchTol = Math.max(lineTol, pointTol); // 擴大掃描範圍防止過早過濾
+      const searchTol = Math.max(lineTol, pointTol);
       
       let best = null; 
       const consider = c => { 
@@ -898,8 +728,184 @@
         label.style.transform = `translate(-50%, -50%) rotate(${labelAngle}deg)`;
     }
 
+    document.querySelector('#lock-position').addEventListener('click', () => {
+      isPositionLocked = !isPositionLocked;
+      updateToolButtons();
+      setStatus(isPositionLocked ? '🔒 位置已鎖定：無法拖曳移動，調較尺寸會保持中心點不變。' : '🔓 鎖定已解除：可自由拖曳移動。');
+    });
+
+    function importedSelectionWithGroups(selection) {
+      const expanded = [...selection];
+      const groups = new Set(expanded.map(el => importedGroupIds.get(el)).filter(Boolean));
+      importedLayers.forEach(layer => {
+        const groupId = importedGroupIds.get(layer.element);
+        if (groupId && groups.has(groupId) && !expanded.includes(layer.element)) expanded.push(layer.element);
+      });
+      return expanded;
+    }
+
+    function updateGroupButtonState() {
+      const btn = document.querySelector('#group-btn');
+      if(!btn) return;
+      const selectedItems = importedMode ? importedSelectedElements : selectedDemoItems();
+      const groupIds = selectedItems.map(item => importedMode ? importedGroupIds.get(item) : item.groupId);
+      const allSameGroup = selectedItems.length > 1 && groupIds.every(Boolean) && new Set(groupIds).size === 1;
+      if (allSameGroup) {
+         btn.innerHTML = '💔'; btn.title = '解散群組 (Ctrl+G)'; btn.classList.add('active-tool');
+      } else {
+         btn.innerHTML = '🔗'; btn.title = '建立群組 (Ctrl+G)'; btn.classList.remove('active-tool');
+      }
+    }
+
+    function toggleGroup() {
+      const selectedItems = importedMode ? importedSelectedElements : selectedDemoItems();
+      if (selectedItems.length <= 1) {
+        sysAlert('操作無效！\n\n請先使用滑鼠拖曳框選，\n或按住 Ctrl 點選「至少兩個圖形」，\n然後再點擊此按鈕進行群組化！');
+        return;
+      }
+
+      const groupIds = selectedItems.map(item => importedMode ? importedGroupIds.get(item) : item.groupId);
+      const allSameGroup = groupIds.every(Boolean) && new Set(groupIds).size === 1;
+      savePoint();
+      if (importedMode) {
+        if (allSameGroup) {
+          selectedItems.forEach(el => importedGroupIds.delete(el));
+          setStatus('💔 群組已成功解散，物件恢復獨立。');
+        } else {
+          const newGroupId = 'imported-group-' + (++importedGroupSeq);
+          selectedItems.forEach(el => importedGroupIds.set(el, newGroupId));
+          setStatus('🔗 已成功將選取物件建立為群組！而家可以整體拖曳。');
+        }
+        importedSelectedElements = importedSelectionWithGroups(selectedItems);
+        importedSelected = importedSelectedElements[0] || null;
+        importedFrame?.contentDocument?.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
+        importedSelectedElements.forEach(el => el.classList.add('ui-editor-selected'));
+        updateImportedOverlay(); renderLayers(); updateGroupButtonState();
+        if (!isTyping) renderImportedInspector();
+        return;
+      }
+
+      if (allSameGroup) {
+        selectedItems.forEach(i => delete i.groupId);
+        setStatus('💔 群組已成功解散，物件恢復獨立。');
+      } else {
+        const newGroupId = 'group-' + Date.now();
+        selectedItems.forEach(i => i.groupId = newGroupId);
+        setStatus('🔗 已成功將選取物件建立為群組！只能整體拖曳，防止拉散。');
+      }
+      setDemoSelection(selectedIds); renderDemo();
+      if (!isTyping) renderDemoInspector();
+    }
+
+    document.querySelector('#group-btn')?.addEventListener('click', toggleGroup);
+
+    const ctxMenu = document.getElementById('context-menu');
+    function hideContextMenu() { ctxMenu.style.display = 'none'; }
+    document.addEventListener('click', hideContextMenu);
+    
+    artboard.addEventListener('contextmenu', e => {
+      if (!editing || eraserMode || panMode || measureMode) return;
+      const target = e.target.closest('.demo-item');
+      if (target) {
+        e.preventDefault();
+        const id = target.dataset.id;
+        if (!selectedIds.includes(id)) {
+           setDemoSelection([id]);
+           renderDemo();
+           if(!isTyping) renderDemoInspector();
+        }
+        
+        const selectedItems = selectedDemoItems();
+        const allSameGroup = selectedItems.length > 1 && selectedItems.every(i => i.groupId) && new Set(selectedItems.map(i => i.groupId)).size === 1;
+        
+        document.querySelector('#ctx-group').disabled = selectedItems.length <= 1 || allSameGroup;
+        document.querySelector('#ctx-ungroup').disabled = !allSameGroup;
+        
+        ctxMenu.style.display = 'flex';
+        let x = e.clientX; let y = e.clientY;
+        if (x + 150 > window.innerWidth) x -= 150;
+        if (y + 100 > window.innerHeight) y -= 100;
+        ctxMenu.style.left = `${x}px`; ctxMenu.style.top = `${y}px`;
+      }
+    });
+
+    document.querySelector('#ctx-group')?.addEventListener('click', () => { toggleGroup(); hideContextMenu(); });
+    document.querySelector('#ctx-ungroup')?.addEventListener('click', () => { toggleGroup(); hideContextMenu(); });
+
+
+    const shapeBtn = document.querySelector('#add-shape-btn');
+    const shapeMenu = document.querySelector('#shape-menu');
+
+    shapeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isShowing = shapeMenu.style.display === 'block';
+      if (isShowing) {
+        shapeMenu.style.display = 'none';
+      } else {
+        const rect = shapeBtn.getBoundingClientRect();
+        shapeMenu.style.display = 'block';
+        shapeMenu.style.top = `${rect.bottom + 4}px`;
+        shapeMenu.style.left = `${rect.left}px`;
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('#add-shape-btn') && !e.target.closest('#shape-menu')) {
+        shapeMenu.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('#shape-menu a').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const shapeType = e.currentTarget.dataset.shape;
+        addShape(shapeType);
+        shapeMenu.style.display = 'none';
+      });
+    });
+
+    function addShape(type) {
+      savePoint();
+      const id = 'shape-' + Date.now();
+      let newItem = {
+        id, type: 'shape', x: Math.max(50, (artboard.clientWidth / 2) - 50), y: Math.max(50, (artboard.clientHeight / 2) - 50), 
+        w: 100, h: 100,
+        color: '#356df3', borderColor: 'transparent', borderWidth: 0,
+        borderRadius: 0, customBorderRadius: null, clipPath: null,
+        name: '圖形', 
+        content: '' // 圖案預設為純色塊，無文字
+      };
+
+      switch(type) {
+        case 'circle': newItem.name = '圓形'; newItem.customBorderRadius = '50%'; break;
+        case 'square': newItem.name = '正方形'; break;
+        case 'rect': newItem.name = '長方形'; newItem.w = 150; break;
+        case 'round-rect': newItem.name = '圓角矩形'; newItem.w = 150; newItem.borderRadius = 16; break;
+        case 'blob': newItem.name = '不規則圓形'; newItem.w = 120; newItem.h = 120; newItem.customBorderRadius = '40% 60% 70% 30% / 40% 50% 60% 50%'; break;
+        case 'triangle': newItem.name = '三角形'; newItem.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)'; newItem.color = '#e6405c'; break;
+        case 'text':
+          newItem.type = 'text'; 
+          newItem.name = '文字';
+          newItem.content = '純向量網頁字體\n自由縮放不失真';
+          newItem.color = 'transparent'; 
+          newItem.textColor = '#17202a';
+          newItem.w = 220;
+          newItem.h = 60;
+          newItem.fontSize = 20;
+          break;
+      }
+
+      items.push(newItem);
+      if (!editing) { editing = true; updateToolButtons(); }
+      setDemoSelection([id]);
+      renderDemo();
+      if (!isTyping) renderDemoInspector();
+      setStatus(`已加入「${newItem.name}」到畫布。`);
+    }
+
     function updateToolButtons() {
       document.querySelector('#edit-mode')?.classList.toggle('active-tool', editing);
+      document.querySelector('#lock-position')?.classList.toggle('active-tool', isPositionLocked);
       document.querySelector('#toggle-guides')?.classList.toggle('active-tool', guidesVisible);
       document.querySelector('#guide-eraser')?.classList.toggle('active-tool', eraserMode);
       document.querySelector('#pan-tool')?.classList.toggle('active-tool', panMode);
@@ -908,6 +914,10 @@
       document.querySelector('#snap-hover')?.classList.toggle('active-tool', activeSnapHover);
       document.querySelector('#snap-grid-toggle')?.classList.toggle('active-tool', SNAP_CFG.grid);
       app.classList.toggle('eraser-mode', eraserMode); app.classList.toggle('pan-mode', panMode); app.classList.toggle('measure-mode', measureMode);
+      app.classList.toggle('position-locked', isPositionLocked);
+      if (importedFrame?.contentDocument?.documentElement) {
+          importedFrame.contentDocument.documentElement.classList.toggle('position-locked', isPositionLocked);
+      }
     }
 
     function cycleGuideMode() {
@@ -980,7 +990,11 @@
           isMarquee = false; marquee.style.display = 'none';
           const mRect = marquee.getBoundingClientRect();
           if (mRect.width < 5 && mRect.height < 5) {
-            if (!ue.ctrlKey && !ue.metaKey) { setDemoSelection([]); if(importedMode) { importedSelectedElements=[]; importedSelected=null; updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector(); } }
+            if (!ue.ctrlKey && !ue.metaKey) { 
+                setDemoSelection([]); 
+                if(importedMode) { importedSelectedElements=[]; importedSelected=null; updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector(); } 
+                else { renderDemo(); if (!isTyping) renderDemoInspector(); }
+            }
           } else {
             const selected = [];
             if (importedMode) {
@@ -988,10 +1002,22 @@
               doc.querySelectorAll('*').forEach(el => {
                 if (!isCandidate(el)) return;
                 const r = el.getBoundingClientRect();
-                const screenR = { left: iframeRect.left + r.left * zoom, top: iframeRect.top + r.top * zoom, right: iframeRect.left + r.right * zoom, bottom: iframeRect.top + r.bottom * zoom };
+                const sx = importedFrame.contentWindow.scrollX;
+                const sy = importedFrame.contentWindow.scrollY;
+                const screenR = { left: iframeRect.left + (r.left + sx) * zoom, top: iframeRect.top + (r.top + sy) * zoom, right: iframeRect.left + (r.right + sx) * zoom, bottom: iframeRect.top + (r.bottom + sy) * zoom };
                 if (screenR.left < mRect.right && screenR.right > mRect.left && screenR.top < mRect.bottom && screenR.bottom > mRect.top) selected.push(el);
               });
-              if (ue.ctrlKey || ue.metaKey) { const newSelection = [...new Set([...importedSelectedElements, ...selected])]; if(newSelection.length) selectImported(newSelection[0], true); importedSelectedElements = newSelection; } else { if (selected.length > 0) selectImported(selected[0]); importedSelectedElements = selected; }
+              if (ue.ctrlKey || ue.metaKey) {
+                const newSelection = importedSelectionWithGroups([...new Set([...importedSelectedElements, ...selected])]);
+                if (newSelection.length) selectImported(newSelection[0], true);
+                importedSelectedElements = newSelection;
+              } else {
+                const newSelection = importedSelectionWithGroups(selected);
+                if (newSelection.length) selectImported(newSelection[0]);
+                importedSelectedElements = newSelection;
+              }
+              importedSelected = importedSelectedElements[0] || null;
+              updateImportedOverlay(); updateGroupButtonState();
               renderImportedState();
             } else {
               artboard.querySelectorAll('.demo-item').forEach(el => {
@@ -999,6 +1025,8 @@
                 if (r.left < mRect.right && r.right > mRect.left && r.top < mRect.bottom && r.bottom > mRect.top) selected.push(el.dataset.id);
               });
               if (ue.ctrlKey || ue.metaKey) setDemoSelection([...new Set([...selectedIds, ...selected])]); else setDemoSelection(selected);
+              renderDemo();
+              if (!isTyping) renderDemoInspector();
             }
           }
           window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
@@ -1075,35 +1103,48 @@
       
       for (const item of items) {
         const element = document.createElement('div');
-        element.className = `demo-item ${item.type||''}${editing ? ' editable' : ''}${selectedIds.includes(item.id) ? ' selected' : ''}`;
+        // 群組選取樣式與普通選取區別
+        const isSelected = selectedIds.includes(item.id);
+        const isGrouped = item.groupId != null;
+        element.className = `demo-item ${item.type||''}${editing ? ' editable' : ''}${isSelected ? ' selected' : ''}${isSelected && isGrouped ? ' grouped-item' : ''}`;
         element.dataset.id = item.id;
         const textShadowStyle = item.textShadow ? `text-shadow: 2px 2px 4px ${item.shadowColor || '#000000'};` : '';
         const fontStyle = `font-family: ${item.fontFamily||'Inter'}; font-size: ${item.fontSize||16}px; color: ${item.textColor || '#17202a'}; ${textShadowStyle}`;
         Object.assign(element.style, { 
           left: `${item.x}px`, top: `${item.y}px`, width: `${item.w}px`, height: `${item.h}px`,
-          borderRadius: `${item.borderRadius || 0}px`, border: `${item.borderWidth || 0}px solid ${item.borderColor || '#000000'}`,
+          border: `${item.borderWidth || 0}px ${item.borderStyle || 'solid'} ${item.borderColor || '#000000'}`,
           backgroundColor: item.color || 'transparent'
         });
+
+        if (item.clipPath) { element.style.clipPath = item.clipPath; }
+        if (item.customBorderRadius) {
+            element.style.borderRadius = item.customBorderRadius;
+        } else {
+            element.style.borderRadius = `${item.borderRadius || 0}px`;
+        }
+
         if (item.gradient) { element.style.background = `linear-gradient(${item.gAngle || 90}deg, ${item.gStart || '#fff'}, ${item.gEnd || '#000'})`; } 
         if (item.shadow) { element.style.boxShadow = `${item.sX || 0}px ${item.sY || 0}px ${item.sBlur || 0}px ${item.sColor || 'rgba(0,0,0,0.2)'}`; } 
         
-        if (item.type === 'hero') {
-          const lines = item.content ? item.content.split('\n') : [''];
-          element.innerHTML = `<p class="eyebrow">視覺編輯器</p><h1 style="${fontStyle}">${escapeHtml(item.name)}</h1><p style="color: ${item.textColor}">${escapeHtml(lines[1] || '')}</p>`;
-        } else if (item.type && item.type.includes('card')) {
-          element.innerHTML = `<div class="icon" style="background:${item.color}">${item.id === 'card-1' ? '✦' : '⌘'}</div><h3 style="${fontStyle}">${escapeHtml(item.name)}</h3><p style="color: ${item.textColor}">${escapeHtml(item.content)}</p>`;
-        } else if (item.type === 'cta') {
-          element.innerHTML = `<span style="${fontStyle}">${escapeHtml(item.content)}</span><button style="pointer-events:none;">開始</button>`;
+        if (item.type === 'text') {
+          element.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; text-align:center; ${fontStyle}">${escapeHtml(item.content || '').replace(/\n/g, '<br>')}</div>`;
         } else {
-          element.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; ${fontStyle}">${escapeHtml(item.name)}</div>`;
+          element.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; ${fontStyle}">${escapeHtml(item.content || '')}</div>`;
         }
         
-        if (editing && item.id === selectedId) {
+        // 防拉散保護：如果只有 1 件被選取，先有縮放手柄；如果係群組，只俾佢整體移動，隱藏周圍縮放點
+        if (editing && item.id === selectedId && selectedIds.length === 1) {
           for (const direction of ['n','s','e','w','nw','ne','sw','se','c']) {
             const handle = document.createElement('button'); handle.className = `resize-handle ${direction}`; handle.dataset.direction = direction;
             handle.addEventListener('pointerdown', event => direction === 'c' ? startDemoDrag(event, element) : startDemoResize(event, item, direction));
             element.appendChild(handle);
           }
+        } else if (editing && selectedIds.includes(item.id) && selectedIds.length > 1) {
+          // 群組模式：加一個隱形中央層負責移動，唔俾拉扯
+          const handle = document.createElement('button'); handle.className = `resize-handle c`; handle.dataset.direction = 'c';
+          handle.style.opacity = '0'; handle.style.width = '100%'; handle.style.height = '100%'; handle.style.cursor = 'move';
+          handle.addEventListener('pointerdown', event => startDemoDrag(event, element));
+          element.appendChild(handle);
         }
         
         element.addEventListener('click', event => {
@@ -1120,18 +1161,36 @@
       renderLayers(); renderGuides(); drawRulers();
     }
     
+    // 群組核心：自動擴展選取
     function setDemoSelection(ids) {
-      selectedIds = [...new Set(ids)].filter(id => items.some(item => item.id === id));
+      let expanded = new Set(ids);
+      let added = true;
+      while(added) {
+        added = false;
+        items.forEach(item => {
+          if (item.groupId && expanded.has(item.id)) {
+            items.forEach(other => {
+              if (other.groupId === item.groupId && !expanded.has(other.id)) {
+                expanded.add(other.id);
+                added = true;
+              }
+            });
+          }
+        });
+      }
+      
+      selectedIds = [...expanded].filter(id => items.some(item => item.id === id));
       selectedId = selectedIds[0] || null;
       if (!selectedIds.length) demoGuideTargets = demoGuideTargets.filter(id => items.some(item => item.id === id));
       if (guideArmed && selectedIds.length === 1) {
         if (!demoGuideTargets.includes(selectedId)) demoGuideTargets = [...demoGuideTargets, selectedId];
         guideArmed = false; guideMode = 'live'; guidesVisible = true; updateToolButtons();
       }
+      updateGroupButtonState();
     }
 
     function startDemoDrag(event, forcedElement = null) {
-      if (eraserMode || !editing || event.button !== 0) return;
+      if (isPositionLocked || eraserMode || !editing || event.button !== 0) return;
       const target = forcedElement || event.target.closest('.demo-item'); if (!target) return;
       event.preventDefault(); event.stopPropagation();
       const id = target.dataset.id;
@@ -1172,7 +1231,7 @@
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) renderDemo();
+        if (moved) { renderDemo(); if(!isTyping) renderDemoInspector(); }
       }
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
     }
@@ -1192,38 +1251,62 @@
         const dx = (moveEvent.screenX - startX) / zoom; const dy = (moveEvent.screenY - startY) / zoom;
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; }
+        
         let nX = original.x, nY = original.y, nW = original.w, nH = original.h;
-        if (direction.includes('e')) nW = original.w + dx;
-        if (direction.includes('w')) { nW = original.w - dx; nX = original.x + dx; }
-        if (direction.includes('s')) nH = original.h + dy;
-        if (direction.includes('n')) { nH = original.h - dy; nY = original.y + dy; }
+        let snap = null;
 
-        const snap = resizeSnapDelta(direction, nX, nY, nW, nH, geo, moveEvent.altKey);
-        if (snap.snapped) {
-          if (direction.includes('e')) nW += snap.dx;
-          if (direction.includes('w')) { nX += snap.dx; nW -= snap.dx; }
-          if (direction.includes('s')) nH += snap.dy;
-          if (direction.includes('n')) { nY += snap.dy; nH -= snap.dy; }
+        if (isPositionLocked) {
+          if (direction.includes('e')) nW = original.w + dx;
+          if (direction.includes('w')) { nW = original.w - dx; nX = original.x + dx; }
+          if (direction.includes('s')) nH = original.h + dy;
+          if (direction.includes('n')) { nH = original.h - dy; nY = original.y + dy; }
+
+          snap = resizeSnapDelta(direction, nX, nY, nW, nH, geo, moveEvent.altKey);
+          
+          let totalDx = dx + (snap.snapped && (direction.includes('e') || direction.includes('w')) ? snap.dx : 0);
+          let totalDy = dy + (snap.snapped && (direction.includes('s') || direction.includes('n')) ? snap.dy : 0);
+
+          if (direction.includes('e')) { nW = original.w + totalDx * 2; nX = original.x - totalDx; }
+          if (direction.includes('w')) { nW = original.w - totalDx * 2; nX = original.x + totalDx; }
+          if (direction.includes('s')) { nH = original.h + totalDy * 2; nY = original.y - totalDy; }
+          if (direction.includes('n')) { nH = original.h - totalDy * 2; nY = original.y + totalDy; }
+
+          if (nW < 20) { nW = 20; nX = original.x + original.w / 2 - 10; }
+          if (nH < 20) { nH = 20; nY = original.y + original.h / 2 - 10; }
+        } else {
+          if (direction.includes('e')) nW = original.w + dx;
+          if (direction.includes('w')) { nW = original.w - dx; nX = original.x + dx; }
+          if (direction.includes('s')) nH = original.h + dy;
+          if (direction.includes('n')) { nH = original.h - dy; nY = original.y + dy; }
+
+          snap = resizeSnapDelta(direction, nX, nY, nW, nH, geo, moveEvent.altKey);
+          if (snap.snapped) {
+            if (direction.includes('e')) nW += snap.dx;
+            if (direction.includes('w')) { nX += snap.dx; nW -= snap.dx; }
+            if (direction.includes('s')) nH += snap.dy;
+            if (direction.includes('n')) { nY += snap.dy; nH -= snap.dy; }
+          }
+
+          if (nW < 20) { if (direction.includes('w')) nX = original.x + original.w - 20; nW = 20; }
+          if (nH < 20) { if (direction.includes('n')) nY = original.y + original.h - 20; nH = 20; }
         }
-
-        if (nW < 20) { if (direction.includes('w')) nX = original.x + original.w - 20; nW = 20; }
-        if (nH < 20) { if (direction.includes('n')) nY = original.y + original.h - 20; nH = 20; }
         
         item.x = nX; item.y = nY; item.w = nW; item.h = nH;
 
         const el = artboard.querySelector(`[data-id="${item.id}"]`);
         if (el) Object.assign(el.style, {left:`${item.x}px`, top:`${item.y}px`, width:`${item.w}px`, height:`${item.h}px`});
 
-        if (snap.snapped) {
-          const pt = snap.point || { x: nX + nW/2, y: nY + nH/2 };
+        if (snap && snap.snapped) {
+          const pt = snap.point || { x: nX + (direction.includes('w') ? 0 : nW), y: nY + (direction.includes('n') ? 0 : nH) };
           drawSnapFeedback({ snapped:true, kind: snap.kind || 'edge', x: pt.x, y: pt.y }, { vLines: snap.vLines, hLines: snap.hLines });
         } else clearSnapFeedback();
       }
+      
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) renderDemo();
+        if (moved) { renderDemo(); if(!isTyping) renderDemoInspector(); }
       }
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
     }
@@ -1232,8 +1315,6 @@
       artboard.querySelector('.guide-layer')?.remove();
       if (importedMode) return;
       const layer = document.createElement('div'); layer.className = 'guide-layer';
-      // guideMode 只應該控制「物件自動產生」嘅參考線；手動拉出嚟嘅參考線係獨立存在，
-      // 唔應該一撳總開關就消失（而下次任何重繪又會死而復生，變成幽靈線）。
       const selected = guideMode === 'hidden' ? [] : items.filter(item => demoGuideTargets.includes(item.id));
       if (guideMode !== 'hidden' && selected.length === 0 && selectedId) selected.push(...items.filter(item => item.id === selectedId));
 
@@ -1276,15 +1357,11 @@
       artboard.appendChild(layer);
     }
     
-    // 【核心修復】完全重寫參考線拖曳，直接操作 DOM，唔再重繪全頁，解決唔見咗同回彈問題
     function startManualGuideDrag(event, kind, index = null, copyOrigin = null) {
       if (guideMode === 'hidden' || guideDrag) return;
       event.preventDefault(); event.stopPropagation();
       
-      // 匯入模式嘅參考線係喺 iframe 內部，pointer 事件唔會冒泡去頂層 document，
-      // 所以必須喺 iframe 自己嗰個 document 監聽，否則拖曳完全冇反應。
       const evtDoc = (importedMode && importedFrame?.contentDocument) ? importedFrame.contentDocument : document;
-      // 座標亦要用同一個文件嘅原點：iframe 內部事件嘅 clientX/Y 係相對 iframe，唔係 artboard。
       const rect = (evtDoc === document) ? artboard.getBoundingClientRect() : { left: 0, top: 0 };
       const startMouseX = event.clientX - rect.left;
       const startMouseY = event.clientY - rect.top;
@@ -1326,7 +1403,6 @@
         if (!moved) { savePoint(); moved = true; }
         list[guideDrag.index].position = rawPos;
 
-        // 【極致順暢】只操作單一 DOM，絕對唔會消失或斷開
         const layer = importedMode ? (importedFrame?.contentDocument) : document;
         if (layer) {
            const guides = layer.querySelectorAll('.manual-guide');
@@ -1349,7 +1425,6 @@
         document.body.style.cursor = '';
         guideDrag = null; snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
         
-        // 拖到畫面外自動刪除功能
         const finalPos = list[index].position;
         const limit = importedMode ? (kind === 'vertical' ? importedViewport.width : importedViewport.height) : (kind === 'vertical' ? (viewportMode === 'mobile' ? 375 : 1280) : (viewportMode === 'mobile' ? 812 : 720));
         if (finalPos < -100 || finalPos > limit + 100) {
@@ -1368,16 +1443,20 @@
     function importedCandidate(target) { const preferred = target?.closest?.('button,a,input,textarea,select,svg,img,h1,h2,h3,h4,h5,h6,p,label'); if (preferred && isCandidate(preferred)) return preferred; return target; }
     function importedName(element) {
       let text = '';
-      if (!['IMG', 'INPUT', 'TEXTAREA', 'SELECT', 'svg', 'path'].includes(element.tagName)) { text = element.innerText?.split('\n')[0].trim(); }
+      if (!['IMG', 'INPUT', 'TEXTAREA', 'SELECT', 'svg', 'path'].includes(element.tagName)) { 
+          let inner = element.innerText || element.textContent || '';
+          text = inner.split('\n')[0].trim(); 
+      }
       if (!text) text = element.getAttribute('aria-label') || element.title || element.id;
       if (!text) { if (element.tagName === 'IMG') text = element.alt || '圖片'; else if (['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName)) text = element.placeholder || element.value || element.name; }
       if (!text || text.length === 0) text = element.tagName.toLowerCase();
-      return text.replace(/\s+/g, ' ').trim().slice(0, 36);
+      return String(text).replace(/\s+/g, ' ').trim().slice(0, 36);
     }
 
     function selectImported(element, additive = false) {
       if (eraserMode || !isCandidate(element)) return;
       if (additive) { if (!importedSelectedElements.includes(element)) importedSelectedElements.push(element); } else { importedSelectedElements = [element]; }
+      importedSelectedElements = importedSelectionWithGroups(importedSelectedElements);
       importedSelected = importedSelectedElements[0] || null;
 
       if (guideArmed && importedSelectedElements.length === 1) {
@@ -1392,10 +1471,13 @@
           if (!importedState.has(el)) {
             const rect = el.getBoundingClientRect(); const computed = window.getComputedStyle(el);
             importedState.set(el, { 
-              dx:0, dy:0, width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height)), 
+              dx:0, dy:0, 
+              width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height)), 
+              widthModified: false,
               colorOverride: null, originalColor: rgbToHex(computed.backgroundColor),
               gradient: false, gStart: '#ffffff', gEnd: '#000000', gAngle: 90, boxShadow: false, sX: 0, sY: 10, sBlur: 20, sColor: '#000000',
               borderRadius: parseFloat(computed.borderRadius) || 0, borderWidth: parseFloat(computed.borderWidth) || 0, borderColor: rgbToHex(computed.borderColor),
+              borderStyle: computed.borderStyle !== 'none' && computed.borderStyle !== '' ? computed.borderStyle.split(' ')[0] : 'solid',
               baseTransform: el.style.transform || '', textOverride: null, textDirty: false, 
               fontSize: parseFloat(computed.fontSize) || 16, fontFamily: computed.fontFamily.split(',')[0].replace(/['"]/g, ''), 
               textColor: rgbToHex(computed.color), textShadow: false, shadowColor: '#000000' 
@@ -1412,13 +1494,12 @@
           const state = importedState.get(el);
           if (state) {
             el.style.transform = `${state.baseTransform} translate(${state.dx}px, ${state.dy}px)`;
-            // state.width/height 係由 getBoundingClientRect() 量度，屬 border-box 數值。
-            // 必須鎖定 border-box，否則 content-box 元素會將 padding + border 額外加上去，
-            // 令對邊(右／下)無故彈開 padding+border 嘅距離。
-            el.style.boxSizing = 'border-box';
-            el.style.width = `${state.width}px`; el.style.height = `${state.height}px`;
+            if (state.widthModified) {
+               el.style.boxSizing = 'border-box';
+               el.style.width = `${state.width}px`; el.style.height = `${state.height}px`;
+            }
             el.style.borderRadius = `${state.borderRadius}px`;
-            if (state.borderWidth > 0) el.style.border = `${state.borderWidth}px solid ${state.borderColor}`; else el.style.border = 'none';
+            if (state.borderWidth > 0) { el.style.border = `${state.borderWidth}px ${state.borderStyle || 'solid'} ${state.borderColor}`; } else { el.style.border = 'none'; }
             if (state.gradient) { el.style.background = `linear-gradient(${state.gAngle}deg, ${state.gStart}, ${state.gEnd})`; } else { el.style.background = 'none'; el.style.backgroundColor = state.colorOverride || state.originalColor; }
             if (state.boxShadow) { el.style.boxShadow = `${state.sX}px ${state.sY}px ${state.sBlur}px ${state.sColor}`; } else { el.style.boxShadow = 'none'; }
             el.style.fontSize = `${state.fontSize}px`; if (state.fontFamily) el.style.fontFamily = state.fontFamily;
@@ -1429,15 +1510,19 @@
     }
     
     function startImportedDrag(event, element) {
-      if (eraserMode || !editing || event.button !== 0) return; 
+      if (isPositionLocked || eraserMode || !editing || event.button !== 0) return; 
       event.preventDefault(); event.stopPropagation();
       if (!importedSelectedElements.includes(element)) { selectImported(element, event.ctrlKey || event.metaKey); }
       const doc = importedFrame.contentDocument; const target = event.target;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
       
+      const win = importedFrame.contentWindow;
+      const sx = win ? win.scrollX : 0;
+      const sy = win ? win.scrollY : 0;
+
       const initialStates = importedSelectedElements.map(el => {
           const st = importedState.get(el); const r = el.getBoundingClientRect();
-          return { el, x: st.dx, y: st.dy, state: st, baseX: r.left - st.dx, baseY: r.top - st.dy, w: r.width, h: r.height };
+          return { el, x: st.dx, y: st.dy, state: st, baseX: (r.left + sx) - st.dx, baseY: (r.top + sy) - st.dy, w: r.width, h: r.height };
       });
 
       const startX = event.screenX; const startY = event.screenY; let moved = false; let dragAxis = null;
@@ -1485,7 +1570,11 @@
       const startX = event.screenX; const startY = event.screenY;
       const state = importedState.get(element);
       const original = { dx: state.dx, dy: state.dy, w: state.width, h: state.height };
-      const elRect = element.getBoundingClientRect(); const baseX = elRect.left - original.dx; const baseY = elRect.top  - original.dy;
+      const elRect = element.getBoundingClientRect(); 
+      const win = importedFrame.contentWindow;
+      const sx = win ? win.scrollX : 0;
+      const sy = win ? win.scrollY : 0;
+      const baseX = (elRect.left + sx) - original.dx; const baseY = (elRect.top + sy) - original.dy;
 
       let moved = false; invalidateSnapGeometry(); snapDragActive = true;
       const geo = snapGeometry([element], true);
@@ -1494,27 +1583,53 @@
         const dx = (moveEvent.screenX - startX) / zoom; const dy = (moveEvent.screenY - startY) / zoom;
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; suppressImportedClick = true; }
+        
+        state.widthModified = true;
         let nX = original.dx, nY = original.dy, nW = original.w, nH = original.h;
-        if (direction.includes('e')) nW = original.w + dx;
-        if (direction.includes('w')) { nW = original.w - dx; nX = original.dx + dx; }
-        if (direction.includes('s')) nH = original.h + dy;
-        if (direction.includes('n')) { nH = original.h - dy; nY = original.dy + dy; }
+        let snap = null;
 
-        const snap = resizeSnapDelta(direction, baseX + nX, baseY + nY, nW, nH, geo, moveEvent.altKey);
-        if (snap.snapped) {
-          if (direction.includes('e')) nW += snap.dx; if (direction.includes('w')) { nX += snap.dx; nW -= snap.dx; }
-          if (direction.includes('s')) nH += snap.dy; if (direction.includes('n')) { nY += snap.dy; nH -= snap.dy; }
+        if (isPositionLocked) {
+          if (direction.includes('e')) nW = original.w + dx;
+          if (direction.includes('w')) { nW = original.w - dx; nX = original.dx + dx; }
+          if (direction.includes('s')) nH = original.h + dy;
+          if (direction.includes('n')) { nH = original.h - dy; nY = original.dy + dy; }
+
+          snap = resizeSnapDelta(direction, baseX + nX, baseY + nY, nW, nH, geo, moveEvent.altKey);
+          
+          let totalDx = dx + (snap.snapped && (direction.includes('e') || direction.includes('w')) ? snap.dx : 0);
+          let totalDy = dy + (snap.snapped && (direction.includes('s') || direction.includes('n')) ? snap.dy : 0);
+
+          if (direction.includes('e')) { nW = original.w + totalDx * 2; nX = original.dx - totalDx; }
+          if (direction.includes('w')) { nW = original.w - totalDx * 2; nX = original.dx + totalDx; }
+          if (direction.includes('s')) { nH = original.h + totalDy * 2; nY = original.dy - totalDy; }
+          if (direction.includes('n')) { nH = original.h - totalDy * 2; nY = original.dy + totalDy; }
+
+          if (nW < 10) { nW = 10; nX = original.dx + original.w / 2 - 5; }
+          if (nH < 10) { nH = 10; nY = original.dy + original.h / 2 - 5; }
+        } else {
+          if (direction.includes('e')) nW = original.w + dx;
+          if (direction.includes('w')) { nW = original.w - dx; nX = original.dx + dx; }
+          if (direction.includes('s')) nH = original.h + dy;
+          if (direction.includes('n')) { nH = original.h - dy; nY = original.dy + dy; }
+
+          snap = resizeSnapDelta(direction, baseX + nX, baseY + nY, nW, nH, geo, moveEvent.altKey);
+          if (snap.snapped) {
+            if (direction.includes('e')) nW += snap.dx; if (direction.includes('w')) { nX += snap.dx; nW -= snap.dx; }
+            if (direction.includes('s')) nH += snap.dy; if (direction.includes('n')) { nY += snap.dy; nH -= snap.dy; }
+          }
+          if (nW < 10) { if (direction.includes('w')) nX = original.dx + original.w - 10; nW = 10; }
+          if (nH < 10) { if (direction.includes('n')) nY = original.dy + original.h - 10; nH = 10; }
         }
-        if (nW < 10) { if (direction.includes('w')) nX = original.dx + original.w - 10; nW = 10; }
-        if (nH < 10) { if (direction.includes('n')) nY = original.dy + original.h - 10; nH = 10; }
+        
         state.dx = nX; state.dy = nY; state.width = nW; state.height = nH;
 
         applyImportedState();
-        if (snap.snapped) {
-          const pt = snap.point || { x: baseX + nX + nW/2, y: baseY + nY + nH/2 };
+        if (snap && snap.snapped) {
+          const pt = snap.point || { x: baseX + nX + (direction.includes('w') ? 0 : nW), y: baseY + nY + (direction.includes('n') ? 0 : nH) };
           drawSnapFeedback({ snapped:true, kind: snap.kind || 'edge', x: pt.x, y: pt.y }, { vLines: snap.vLines, hLines: snap.hLines });
         } else clearSnapFeedback();
       }
+      
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', stop);
@@ -1535,10 +1650,14 @@
       const selected = guideMode === 'hidden' ? [] : importedGuideTargets.filter(el => el && el.isConnected);
       selected.forEach(element => {
         const rect = element.getBoundingClientRect();
+        const win = importedFrame.contentWindow;
+        const sx = win ? win.scrollX : 0; const sy = win ? win.scrollY : 0;
+        const absLeft = rect.left + sx; const absRight = rect.right + sx;
+        const absTop = rect.top + sy; const absBottom = rect.bottom + sy;
         const gs = [
-          {k:'vertical',p:rect.left,edge:'left'}, {k:'vertical',p:rect.right,edge:'right'},
-          {k:'horizontal',p:rect.top,edge:'top'}, {k:'horizontal',p:rect.bottom,edge:'bottom'},
-          {k:'vertical',p:rect.left+rect.width/2,edge:'center-x'}, {k:'horizontal',p:rect.top+rect.height/2,edge:'center-y'}
+          {k:'vertical',p:absLeft,edge:'left'}, {k:'vertical',p:absRight,edge:'right'},
+          {k:'horizontal',p:absTop,edge:'top'}, {k:'horizontal',p:absBottom,edge:'bottom'},
+          {k:'vertical',p:absLeft+rect.width/2,edge:'center-x'}, {k:'horizontal',p:absTop+rect.height/2,edge:'center-y'}
         ];
         gs.forEach(g => {
           const eid = importedElementIds.get(element) || 'imported'; const key = `${eid}:${g.edge}`;
@@ -1603,19 +1722,19 @@
     }
 
     function bindImportedFrame() {
-      const doc = importedFrame.contentDocument; if (!doc?.body) return;
+      isIframeLoaded = true;
+      const doc = importedFrame.contentDocument; if (!doc?.body) { renderLayers(); return; }
       const style = doc.createElement('style'); style.id = 'ui-editor-style';
-      style.textContent = '.ui-editor-selected{outline:none!important;outline-offset:0!important;box-shadow:none!important;cursor:move!important}#ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important}';
-      doc.head.appendChild(style); addImportedOverlay();
+      style.textContent = '.ui-editor-selected{outline:none!important;outline-offset:0!important;box-shadow:none!important;cursor:move!important}#ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
+      const headOrBody = doc.head || doc.body || doc.documentElement;
+      if (headOrBody) headOrBody.appendChild(style); 
+      addImportedOverlay();
       const all = [...doc.body.querySelectorAll('*')].filter(isCandidate);
       importedLayers = all.filter(element => { const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; }).slice(0, 80).map(element => ({element, name: importedName(element)}));
       updateImportedViewport();
       
       doc.addEventListener('pointerdown', event => {
         if (eraserMode || event.button !== 0 || !editing || event.target.closest('#ui-editor-overlay')) return;
-        // 參考線／參考線圖層唔係可拖曳嘅頁面元素。呢個 capture 階段嘅監聽器行得比
-        // 參考線自己嘅 handler 早，如果唔避開，就會將「拖參考線」當成「拖元素」而搶走事件，
-        // 令匯入模式嘅參考線完全拖唔動。
         if (event.target.closest('.guide-line, .guide-layer')) return;
         const element = importedCandidate(event.target); if (!isCandidate(element)) return;
         startImportedDrag(event, element);
@@ -1629,6 +1748,25 @@
         else clearSnapFeedback();
       }, true);
       
+      doc.addEventListener('contextmenu', event => {
+        if (!editing || eraserMode || panMode || measureMode) return;
+        const element = importedCandidate(event.target);
+        if (!isCandidate(element)) return;
+        event.preventDefault(); event.stopPropagation();
+        if (!importedSelectedElements.includes(element)) selectImported(element, false);
+        const selectedItems = importedSelectedElements;
+        const groupIds = selectedItems.map(el => importedGroupIds.get(el));
+        const allSameGroup = selectedItems.length > 1 && groupIds.every(Boolean) && new Set(groupIds).size === 1;
+        document.querySelector('#ctx-group').disabled = selectedItems.length <= 1 || allSameGroup;
+        document.querySelector('#ctx-ungroup').disabled = !allSameGroup;
+        ctxMenu.style.display = 'flex';
+        let x = event.clientX + importedFrame.getBoundingClientRect().left;
+        let y = event.clientY + importedFrame.getBoundingClientRect().top;
+        if (x + 150 > window.innerWidth) x -= 150;
+        if (y + 100 > window.innerHeight) y -= 100;
+        ctxMenu.style.left = `${Math.max(4, x)}px`; ctxMenu.style.top = `${Math.max(4, y)}px`;
+      }, true);
+
       doc.addEventListener('click', event => {
         if (editing && (event.target.tagName === 'BUTTON' || event.target.tagName === 'A' || event.target.closest('a') || event.target.closest('button'))) { event.preventDefault(); event.stopPropagation(); }
         if (eraserMode || suppressImportedClick) { if (suppressImportedClick) suppressImportedClick = false; event.preventDefault(); event.stopPropagation(); return; }
@@ -1647,6 +1785,9 @@
             } else { selectImported(element, false); }
         }
       }, true);
+      
+      importedFrame.contentWindow.addEventListener('scroll', () => { updateImportedOverlay(); });
+
       renderLayers(); if (!isTyping) renderImportedInspector();
     }
 
@@ -1658,13 +1799,34 @@
       updateImportedOverlay(); drawRulers();
     }
     
-    function renderImported() { artboard.className = 'artboard imported-board'; if (!importedFrame) { artboard.innerHTML = '<iframe id="imported-frame" class="imported-frame" title="原有 HTML 預覽" sandbox="allow-scripts allow-same-origin"></iframe>'; artboard.appendChild(measureLayer); importedFrame = document.querySelector('#imported-frame'); importedFrame.addEventListener('load', () => { bindImportedFrame(); setTimeout(() => { updateImportedViewport(); fitView(); }, 100); }, {once:true}); importedFrame.srcdoc = importedHtml; } importedFrame.classList.toggle('editing-frame', editing); updateImportedViewport(); }
+    function renderImported() { 
+        artboard.className = 'artboard imported-board'; 
+        if (!importedFrame) { 
+            artboard.innerHTML = '<iframe id="imported-frame" class="imported-frame" title="原有 HTML 預覽" sandbox="allow-scripts allow-same-origin"></iframe>'; 
+            artboard.appendChild(measureLayer); 
+            importedFrame = document.querySelector('#imported-frame'); 
+            let bound = false;
+            const doBind = () => { if (bound) return; bound = true; bindImportedFrame(); setTimeout(() => { updateImportedViewport(); fitView(); }, 100); };
+            importedFrame.addEventListener('load', doBind, {once:true}); 
+            setTimeout(doBind, 1500); // 1.5秒超時強制載入
+            importedFrame.srcdoc = importedHtml; 
+        } 
+        importedFrame.classList.toggle('editing-frame', editing); 
+        updateImportedViewport(); 
+    }
     function renderImportedState() { renderImported(); renderLayers(); if (!isTyping) renderImportedInspector(); }
     
     function renderLayers() { 
       if (importedMode) { 
-        layers.innerHTML = importedLayers.length ? importedLayers.map((item, index) => `<button class="layer ${importedSelectedElements.includes(item.element) ? 'selected' : ''}" data-index="${index}"><span class="layer-icon">▤</span><span>${escapeHtml(item.name)}</span></button>`).join('') : '<div class="empty">讀取中…</div>'; 
-        layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { const target = importedLayers[Number(element.dataset.index)].element; selectImported(target, event.metaKey || event.ctrlKey); })); return; 
+        if (!isIframeLoaded) {
+            layers.innerHTML = '<div class="empty">讀取中…</div>';
+        } else if (importedLayers.length > 0) {
+            layers.innerHTML = importedLayers.map((item, index) => `<button class="layer ${importedSelectedElements.includes(item.element) ? 'selected' : ''}" data-index="${index}"><span class="layer-icon">▤</span><span>${escapeHtml(item.name)}</span></button>`).join(''); 
+            layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { const target = importedLayers[Number(element.dataset.index)].element; selectImported(target, event.metaKey || event.ctrlKey); })); 
+        } else {
+            layers.innerHTML = '<div class="empty">找不到可編輯圖層</div>';
+        }
+        return; 
       } 
       layers.innerHTML = items.length ? items.map(item => { return `<button class="layer ${selectedIds.includes(item.id) ? 'selected' : ''}" data-id="${item.id}"><span class="layer-icon">▤</span><span>${escapeHtml(item.name)}</span></button>`; }).join('') : '<div class="empty">請匯入檔案。</div>'; 
       layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { 
@@ -1757,7 +1919,7 @@
       let fontOptions = '';
       availableFonts.forEach(f => { fontOptions += '<option value="' + f + '" ' + (item.fontFamily === f ? 'selected' : '') + '>' + f + '</option>'; });
       
-      let html = '<div class="section" style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent); color: var(--accent);"><div style="font-size: 10px; font-weight: bold; opacity: 0.8; margin-bottom: 2px;">當前選取</div><div style="font-size: 13px; font-weight: 800;">' + escapeHtml(item.name) + '</div></div>';
+      let html = '<div class="section" style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent); color: var(--accent);"><div style="font-size: 10px; font-weight: bold; opacity: 0.8; margin-bottom: 2px;">當前選取</div><div style="font-size: 13px; font-weight: 800;">' + escapeHtml(item.name || '圖形') + '</div></div>';
       html += renderMultiSelectInfo() + alignmentTools();
       
       html += '<div class="section"><h2 class="panel-title">📍 位置與尺寸</h2><div class="form-grid">';
@@ -1770,6 +1932,7 @@
       html += '<div class="section"><h2 class="panel-title">🔲 外觀與邊框</h2><div class="form-grid">';
       html += '<div class="field"><label>圓角 (px)</label><input id="borderRadius" type="number" min="0" value="' + (item.borderRadius || 0) + '"></div>';
       html += '<div class="field"><label>邊框粗幼 (px)</label><input id="borderWidth" type="number" min="0" value="' + (item.borderWidth || 0) + '"></div>';
+      html += '<div class="field full"><label>邊框樣式</label><select id="borderStyle"><option value="solid" '+(item.borderStyle==='solid'||!item.borderStyle?'selected':'')+'>實線 (Solid)</option><option value="dashed" '+(item.borderStyle==='dashed'?'selected':'')+'>虛線 (Dashed)</option><option value="dotted" '+(item.borderStyle==='dotted'?'selected':'')+'>點線 (Dotted)</option></select></div>';
       html += '<div class="field full"><label>邊框顏色</label><div class="color-input"><input id="borderColor" type="color" value="' + (item.borderColor || '#000000') + '"></div></div>';
       html += '</div></div>';
 
@@ -1797,10 +1960,10 @@
       html += '</div>';
 
       html += '<div class="section typography-panel"><h2 class="panel-title">🅰 文字與排版</h2>';
-      html += '<div class="field full"><label>文字內容</label><textarea id="content" rows="3">' + escapeHtml(item.content) + '</textarea></div>';
+      html += '<div class="field full"><label>文字內容</label><textarea id="content" rows="3">' + escapeHtml(item.content || '') + '</textarea></div>';
       html += '<div class="form-grid" style="margin-top:6px;">';
       html += '<div class="field full"><label>字體 (Font)</label><select id="fontFamily">' + fontOptions + '</select></div>';
-      html += '<div class="field"><label>文字大小 (px)</label><input type="number" id="fontSize" value="' + item.fontSize + '"></div>';
+      html += '<div class="field"><label>文字大小 (px)</label><input type="number" id="fontSize" value="' + (item.fontSize || 16) + '"></div>';
       html += '<div class="field"><label>文字顏色</label><div class="color-input"><input id="textColor" type="color" value="' + (item.textColor || '#17202a') + '"></div></div>';
       html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="textShadow" ' + (item.textShadow ? 'checked' : '') + '> 開啟文字陰影</label>';
       if (item.textShadow) {
@@ -1818,8 +1981,17 @@
       item.y = document.querySelector('#y') ? clamp(Number(document.querySelector('#y').value), 0, 2000) : item.y;
       item.w = document.querySelector('#w') ? clamp(Number(document.querySelector('#w').value), 20, 2000) : item.w;
       item.h = document.querySelector('#h') ? clamp(Number(document.querySelector('#h').value), 20, 2000) : item.h;
-      item.borderRadius = document.querySelector('#borderRadius') ? Number(document.querySelector('#borderRadius').value) : item.borderRadius;
+      
+      if (document.querySelector('#borderRadius')) {
+          const newRadius = Number(document.querySelector('#borderRadius').value);
+          if (newRadius !== item.borderRadius) {
+              item.borderRadius = newRadius;
+              item.customBorderRadius = null; 
+          }
+      }
+
       item.borderWidth = document.querySelector('#borderWidth') ? Number(document.querySelector('#borderWidth').value) : item.borderWidth;
+      item.borderStyle = document.querySelector('#borderStyle')?.value ?? item.borderStyle;
       item.borderColor = document.querySelector('#borderColor')?.value ?? item.borderColor;
       item.color = document.querySelector('#color')?.value ?? item.color;
       item.gradient = document.querySelector('#gradient')?.checked ?? item.gradient;
@@ -1867,6 +2039,7 @@
       html += '<div class="section"><h2 class="panel-title">🔲 外觀與邊框</h2><div class="form-grid">';
       html += '<div class="field"><label>圓角 (px)</label><input id="iborderRadius" type="number" min="0" value="' + state.borderRadius + '"></div>';
       html += '<div class="field"><label>邊框粗幼 (px)</label><input id="iborderWidth" type="number" min="0" value="' + state.borderWidth + '"></div>';
+      html += '<div class="field full"><label>邊框樣式</label><select id="iborderStyle"><option value="solid" '+(state.borderStyle==='solid'||!state.borderStyle?'selected':'')+'>實線 (Solid)</option><option value="dashed" '+(state.borderStyle==='dashed'?'selected':'')+'>虛線 (Dashed)</option><option value="dotted" '+(state.borderStyle==='dotted'?'selected':'')+'>點線 (Dotted)</option></select></div>';
       html += '<div class="field full"><label>邊框顏色</label><div class="color-input"><input id="iborderColor" type="color" value="' + state.borderColor + '"></div></div>';
       html += '</div></div>';
 
@@ -1933,12 +2106,17 @@
       isTyping = event && event.type === 'input';
       const state = importedState.get(importedSelected); if (!state) return;
       
+      const newW = Number(document.querySelector('#iw')?.value ?? state.width);
+      const newH = Number(document.querySelector('#ih')?.value ?? state.height);
+      if (newW !== state.width || newH !== state.height) state.widthModified = true;
+
       state.dx = clamp(Number(document.querySelector('#ix')?.value ?? state.dx), -5000, 5000); 
       state.dy = clamp(Number(document.querySelector('#iy')?.value ?? state.dy), -5000, 5000);
-      state.width = clamp(Number(document.querySelector('#iw')?.value ?? state.width), 1, 10000); 
-      state.height = clamp(Number(document.querySelector('#ih')?.value ?? state.height), 1, 10000);
+      state.width = clamp(newW, 1, 10000); 
+      state.height = clamp(newH, 1, 10000);
       state.borderRadius = Number(document.querySelector('#iborderRadius')?.value ?? state.borderRadius);
       state.borderWidth = Number(document.querySelector('#iborderWidth')?.value ?? state.borderWidth);
+      state.borderStyle = document.querySelector('#iborderStyle')?.value ?? state.borderStyle;
       state.borderColor = document.querySelector('#iborderColor')?.value ?? state.borderColor;
       state.colorOverride = document.querySelector('#icolor')?.value ?? state.colorOverride;
       state.gradient = document.querySelector('#igradient')?.checked ?? state.gradient;
@@ -1984,7 +2162,7 @@
         }
     });
 
-    function snapshot() { return JSON.stringify({ items: items.map(i => ({...i})), manualGuides, hiddenDemoGuideKeys, demoGuideTargets, importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets: importedGuideTargets.map(element => importedLayers.findIndex(item => item.element === element)).filter(index => index >= 0), activeTheme, importedMode, importedSourceHtml, importedHtml, importedDirty, editing, zoom, guideMode, eraserMode, viewportMode }); }
+    function snapshot() { return JSON.stringify({ items: items.map(i => ({...i})), manualGuides, hiddenDemoGuideKeys, demoGuideTargets, importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets: importedGuideTargets.map(element => importedLayers.findIndex(item => item.element === element)).filter(index => index >= 0), activeTheme, importedMode, importedSourceHtml, importedHtml, importedDirty, editing, zoom, guideMode, eraserMode, viewportMode, isPositionLocked }); }
     function restoreSnapshot(value) { 
         const state = JSON.parse(value); 
         items = state.items || [];
@@ -1993,6 +2171,15 @@
         demoGuideTargets = state.demoGuideTargets || [];
         importedManualGuides = state.importedManualGuides || [];
         hiddenImportedGuideKeys = state.hiddenImportedGuideKeys || [];
+        isPositionLocked = state.isPositionLocked || false;
+        
+        if (importedMode && state.importedHtml !== importedHtml) {
+            importedHtml = state.importedHtml;
+            if (importedFrame) {
+                importedFrame.srcdoc = importedHtml;
+            }
+        }
+        
         updateToolButtons(); render(); drawRulers(); 
     }
     function updateHistoryButtons() { document.querySelector('#undo').disabled = history.length === 0; document.querySelector('#redo').disabled = future.length === 0; }
@@ -2000,10 +2187,55 @@
     function undo() { if (!history.length) return; future.push(snapshot()); restoreSnapshot(history.pop()); updateHistoryButtons(); }
     function redo() { if (!future.length) return; history.push(snapshot()); restoreSnapshot(future.pop()); updateHistoryButtons(); }
     
+    function performQuickSave() {
+        if (!importedMode || !importedFrame || !importedFrame.contentDocument) {
+            setStatus('暫存功能主要適用於匯入嘅網頁檔案。');
+            return;
+        }
+        const doc = importedFrame.contentDocument;
+        const htmlClone = doc.documentElement.cloneNode(true);
+
+        htmlClone.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
+        const overlay = htmlClone.querySelector('#ui-editor-overlay'); if (overlay) overlay.remove();
+        htmlClone.querySelectorAll('.guide-layer, .manual-guide').forEach(el => el.remove());
+        const styleTag = htmlClone.querySelector('#ui-editor-style'); if (styleTag) styleTag.remove();
+        htmlClone.classList.remove('position-locked', 'eraser-mode');
+
+        importedHtml = '<!doctype html>\n' + htmlClone.outerHTML;
+        importedDirty = false;
+        
+        const btn = document.querySelector('#quick-save');
+        if (btn) {
+            const oldBg = btn.style.background;
+            btn.style.background = '#a8f0c6';
+            setTimeout(() => { btn.style.background = oldBg; }, 300);
+        }
+        
+        savePoint();
+        setStatus('💾 已成功暫存！你而家所見嘅修改已經寫入內部記憶體。');
+    }
+
+    document.querySelector('#export').addEventListener('click', () => {
+        if (!importedMode) { setStatus('請先匯入網頁檔案，再進行匯出。'); return; }
+        performQuickSave(); // 匯出前強制幫你暫存一次，確保攞到最新畫面
+        
+        const blob = new Blob([importedHtml], {type: 'text/html;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); 
+        a.href = url; 
+        a.download = 'visionflow_export.html'; 
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        setStatus('✅ HTML 檔案已成功匯出到你嘅電腦！');
+    });
+
+    document.querySelector('#quick-save').addEventListener('click', performQuickSave);
+
     function fitView() { if (!importedMode || !importedFrame) { zoom = 1; zoomLabel.textContent = '100%'; renderDemo(); return; } updateImportedViewport(); const area = document.querySelector('.canvas-scroll'); const ratio = Math.min((area.clientWidth - 32) / importedViewport.width, (area.clientHeight - 32) / importedViewport.height, 1); zoom = clamp(Math.round(ratio * 100) / 100, .1, 1); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; updateImportedViewport(); drawRulers(); }
 
     function fileAsDataUrl(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
-    async function loadSelectedFiles(files) { const htmlFile = files.find(file => /\.html?$/i.test(file.name)); if (!htmlFile) return; try { const reader = new FileReader(); reader.onload = () => { savePoint(); importedMode = true; importedSourceHtml = String(reader.result); importedHtml = importedSourceHtml; importedDirty = false; importedFrame = null; editing = true; updateToolButtons(); renderImportedState(); }; reader.readAsText(htmlFile); } catch (error) { setStatus('讀取檔案失敗。'); } }
+    async function loadSelectedFiles(files) { const htmlFile = files.find(file => /\.html?$/i.test(file.name)); if (!htmlFile) return; try { const reader = new FileReader(); reader.onload = () => { savePoint(); importedMode = true; importedSourceHtml = String(reader.result); importedHtml = importedSourceHtml; importedDirty = false; importedFrame = null; editing = true; isIframeLoaded = false; updateToolButtons(); renderImportedState(); }; reader.readAsText(htmlFile); } catch (error) { setStatus('讀取檔案失敗。'); } }
 
     async function toggleFullscreen() {
       if (document.fullscreenElement) { await document.exitFullscreen?.(); return; }
@@ -2026,7 +2258,7 @@
     document.querySelector('#reset').addEventListener('click', () => {
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
       manualGuides = []; importedManualGuides = []; demoGuideTargets = []; importedGuideTargets = []; hiddenDemoGuideKeys = []; hiddenImportedGuideKeys = [];
-      eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; updateToolButtons(); viewportMode = 'desktop'; applyTheme(themes[0]); renderDemo();
+      eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; isPositionLocked = false; isIframeLoaded = false; updateToolButtons(); viewportMode = 'desktop'; applyTheme(themes[0]); renderDemo();
     });
     
     document.querySelector('#zoom-in').addEventListener('click', () => { zoom = clamp(zoom + .1, .1, 1.5); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; invalidateSnapGeometry(); clearSnapFeedback(); snapLayerEl(); if (importedMode) updateImportedViewport(); else renderDemo(); drawRulers(); });
@@ -2091,13 +2323,14 @@
       });
     }
 
-    function render() { if (!importedMode) applyTheme(themes.find(theme => theme.id === activeTheme) || themes[0]); renderThemes(); if (importedMode) renderImportedState(); else renderDemo(); updateHistoryButtons(); }
+    function render() { if (!importedMode) applyTheme(themes.find(theme => theme.id === activeTheme) || themes[0]); renderThemes(); if (importedMode) renderImportedState(); else renderDemo(); updateHistoryButtons(); drawRulers(); }
     
     document.addEventListener('keydown', e => {
       const tag = (e.target.tagName || '').toUpperCase();
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
-      if (e.ctrlKey || e.metaKey) return;
       const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'g') { e.preventDefault(); toggleGroup(); return; }
+      if (e.ctrlKey || e.metaKey) return;
       if (k === 's') { e.preventDefault(); document.querySelector('#snap-toggle').click(); }
       else if (k === 'i') { e.preventDefault(); document.querySelector('#snap-hover').click(); }
       else if (k === 'g') { e.preventDefault(); document.querySelector('#snap-grid-toggle').click(); }
@@ -2108,5 +2341,7 @@
 
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons();
-    setStatus('就緒。智能鎖點已開啟 — 交點／端點／中點會自動吸附。按 I 開啟鎖點預覽，按 S 切換吸附，拖曳時按 Alt 暫時解除。');
-  </script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
+    setStatus('就緒。');
+  </script>
+</body>
+</html>
