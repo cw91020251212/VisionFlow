@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VisionFlow regression fixture</title><style>
+* { box-sizing: border-box; } body { margin:0; padding:24px; font:16px Georgia,serif; }
+#card { width:300px; padding:24px; background:linear-gradient(45deg,#ffe0ae,#cbe7ff); border:3px dashed #674a9d; border-radius:18px; box-shadow:4px 8px 16px rgba(20,30,40,.35); transform:rotate(2deg); color:#224466; }
+#save-button { background:#3366cc; color:white; border:2px solid #113366; border-radius:8px; padding:10px 20px; box-shadow:0 3px 8px #999; }
+#name { width:220px; height:40px; border:2px solid #8899aa; border-radius:6px; }
+.list-item { margin:8px; padding:8px; border:1px solid #ccc; }
+#responsive { display:flex; flex-wrap:wrap; gap:12px; } #responsive span { background:#edf; padding:12px; min-width:170px; }
+@media(max-width:700px) { #card { max-width:100%; } #responsive { max-width:320px; } }
+</style></head><body>
+<div id="card"><h2>原有漸層卡片</h2><p>文字不應因為圓角或拖動改變。</p></div>
+<button id="save-button" type="button">保存</button><form id="profile"><label for="name">名稱</label><input id="name" name="customer" type="text" value="原有內容"></form>
+<a id="docs" href="https://example.com/docs">原始文件連結</a>
+<ul id="list"><li class="list-item" data-key="first">列表一</li><li class="list-item" data-key="second">列表二</li></ul>
+<div id="responsive"><span id="wrap-one">手機需要換行的第一項</span><span id="wrap-two">手機需要換行的第二項</span></div>
+<div id="runtime-host"></div><p id="click-count">0</p>
+<script>
+window.clicks=0;
+document.getElementById('save-button').addEventListener('click',()=>{ window.clicks++; document.getElementById('click-count').textContent=window.clicks; });
+const el=document.createElement('button'); el.id='runtime-button'; el.textContent='JavaScript 生成的按鈕'; document.getElementById('runtime-host').appendChild(el);
+el.addEventListener('click',()=>{el.dataset.state='loading'; el.textContent='載入中';});
+</script>
+</body></html>

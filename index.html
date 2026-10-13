@@ -132,6 +132,7 @@
     .color-input { display: flex; gap: 4px; align-items: center; }
     .color-input input[type=color] { width: 26px; padding: 1px; height: 23px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; }
 
+    .appearance-notice { padding: 7px 10px; font-size: 11px; line-height: 1.45; background: var(--accent-soft); color: #23467e; border-top: 1px solid var(--line); }
     .status { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-top: 1px solid #cfd6e0; color: var(--muted); font-size: 11px; background: rgba(255,255,255,.88); }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2eae67; }
     .footer { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--muted); border-top: 1px solid var(--line); background: var(--panel); font-size: 10px; z-index: 10; position: relative; }
@@ -193,8 +194,9 @@
     .demo-item.editable { cursor: move; outline: none; outline-offset: -2px; touch-action: none; }
     
     /* 普通選取 vs 群組選取 的清晰區別 */
-    .demo-item.selected { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; z-index: 15; }
-    .demo-item.selected.grouped-item { outline: 2.5px solid #d017c8 !important; outline-offset: -2.5px; z-index: 16; }
+    .demo-selection-overlay { position: absolute; outline: 2px solid var(--accent); outline-offset: -2px; z-index: 100; pointer-events: none; }
+    .demo-selection-overlay .resize-handle { pointer-events: auto; }
+    .demo-selection-overlay.grouped-item { outline-color: #d017c8; }
     
     .guide-copying { border-color: #17a673 !important; cursor: grabbing !important; }
     
@@ -284,7 +286,8 @@
         <button class="button" id="redo">↷ 重做</button>
         <button class="button" id="quick-save" style="font-weight:bold; color:#0fa958; border-color:#0fa958; background:#eafcf1;" title="即時儲存目前所有修改，防止切換頁面時遺失">💾 暫存</button>
         <button class="button" id="reset">清空畫布</button>
-        <button class="button primary" id="export">匯出 HTML</button>
+        <button class="button primary" id="export">匯出外觀 HTML</button>
+        <button class="button" id="export-json">匯出 JSON</button>
       </div>
     </header>
     
@@ -294,9 +297,19 @@
         <section class="section">
           <h2 class="panel-title" style="margin-top: 8px;">專案</h2>
           <div class="file-drop">
-            <strong>匯入 HTML</strong>
-            <input id="file-input" type="file" accept=".html,.htm,text/html" multiple>
+            <strong>匯入 HTML／外觀檔案</strong>
+            <input id="file-input" type="file" accept=".html,.htm,.json,text/html,application/json" multiple>
             <label class="button folder-label">選取網站資料夾<input id="folder-input" type="file" webkitdirectory directory multiple></label>
+            <p class="hint">只編輯目前 HTML 入口；支援靜態 CSS／圖片資源。SPA、模組載入及伺服器路由不保證可預覽。匯出並非原工程。</p>
+            <label class="field"><span>資料夾入口頁</span><select id="vf-entry-page" disabled><option>尚未匯入</option></select></label>
+            <label class="checkbox-field" style="margin-top:8px"><input type="checkbox" id="vf-trusted-scripts">允許可信頁面的脚本預覽</label>
+            <p class="hint">只對自己的可信程式啟用；脚本可能存取網路及編輯器，不能當安全沙箱。外觀匯出不含可執行業務脚本，執行狀態不能保證保存。</p>
+          </div>
+          <div class="form-grid" style="margin-top:8px">
+            <div class="field full"><label>原始專案名稱</label><input id="vf-project-name" placeholder="選填"></div>
+            <div class="field full"><label>原始頁面路徑</label><input id="vf-page-path" value="/"></div>
+            <div class="field full"><label>補充說明（交給整合 AI）</label><textarea id="vf-user-notes" rows="3"></textarea></div>
+            <div class="field full"><label>外觀狀態（編輯中模擬；匯出使用實際狀態 CSS）</label><select id="vf-edit-state"><option value="default">Default</option><option value="hover">Hover</option><option value="focus">Focus</option><option value="disabled">Disabled</option><option value="loading">Loading</option></select></div>
           </div>
         </section>
         <section class="section">
@@ -304,7 +317,7 @@
           <div class="layer-list" id="layers"></div>
         </section>
         <section class="section">
-          <h2 class="panel-title">風格配置</h2>
+          <h2 class="panel-title">編輯器風格（不改原頁面）</h2>
           <div class="theme-grid" id="themes"></div>
         </section>
       </aside>
@@ -326,6 +339,7 @@
             </div>
           </div>
         </div>
+        <div class="appearance-notice">目前只編輯外觀參考，不會自動修改原始程式。請將原始工程、外觀檔案及說明交給 AI 整合。選框／參考線不匯出；文字受保護；業務功能不保證。</div>
         <div class="status"><span class="status-dot"></span><span id="status-text">就緒。</span></div>
       </section>
       
@@ -778,8 +792,8 @@
         }
         importedSelectedElements = importedSelectionWithGroups(selectedItems);
         importedSelected = importedSelectedElements[0] || null;
-        importedFrame?.contentDocument?.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
-        importedSelectedElements.forEach(el => el.classList.add('ui-editor-selected'));
+
+
         updateImportedOverlay(); renderLayers(); updateGroupButtonState();
         if (!isTyping) renderImportedInspector();
         return;
@@ -865,6 +879,7 @@
     });
 
     function addShape(type) {
+      if (importedMode) { sysAlert('新增圖形只適用於空白演示畫布。匯入模式只修改原有元素外觀，不新增內容。'); return; }
       savePoint();
       const id = 'shape-' + Date.now();
       let newItem = {
@@ -916,7 +931,7 @@
       app.classList.toggle('eraser-mode', eraserMode); app.classList.toggle('pan-mode', panMode); app.classList.toggle('measure-mode', measureMode);
       app.classList.toggle('position-locked', isPositionLocked);
       if (importedFrame?.contentDocument?.documentElement) {
-          importedFrame.contentDocument.documentElement.classList.toggle('position-locked', isPositionLocked);
+          if (importedOverlay) importedOverlay.querySelector('.resize-handle.c').style.display = isPositionLocked ? 'none' : '';
       }
     }
 
@@ -926,7 +941,7 @@
       const currentKey = importedMode ? current : current?.id;
       const hasCurrentGuide = current && targets.includes(currentKey);
       eraserMode = false; panMode = false; measureMode = false; updateToolButtons();
-      if (importedFrame?.contentDocument?.documentElement) importedFrame.contentDocument.documentElement.classList.remove('eraser-mode');
+
       selectedManualGuide = null;
       if (!guideArmed && hasCurrentGuide) {
         if (importedMode) importedGuideTargets = importedGuideTargets.filter(element => element !== current);
@@ -953,7 +968,7 @@
     function toggleGuideEraser() {
       eraserMode = !eraserMode; if (eraserMode) { panMode = false; measureMode = false; }
       selectedManualGuide = null; updateToolButtons();
-      if (importedMode && importedFrame?.contentDocument?.documentElement) importedFrame.contentDocument.documentElement.classList.toggle('eraser-mode', eraserMode);
+
       if (importedMode) renderImportedGuides(); else { renderDemo(); renderGuides(); }
       setStatus(eraserMode ? '擦膠開啟：撳住左鍵掃過參考線即可刪除。' : '擦膠已關閉。');
     }
@@ -1043,14 +1058,14 @@
 
     function applyTheme(theme) { 
       activeTheme = theme.id; 
-      if (importedMode && importedFrame?.contentDocument?.body) { importedFrame.contentDocument.body.style.background = theme.bg; } 
+      if (importedMode) { app.style.setProperty('--panel', theme.surface); app.style.setProperty('--panel-soft', theme.soft); app.style.setProperty('--text', theme.text); }
       else { artboard.style.background = theme.bg; }
       document.querySelectorAll('.theme-card').forEach(el => el.classList.toggle('selected', el.dataset.theme === theme.id)); 
     }
     
     function renderThemes() { 
       themesEl.innerHTML = themes.map(theme => `<button class="theme-card ${theme.id === activeTheme ? 'selected' : ''}" data-theme="${theme.id}" style="--theme-bg:${theme.bg};--theme-text:${theme.text}"><span class="theme-swatch"><i style="--swatch:${theme.accent}"></i><i style="--swatch:${theme.text}"></i><i style="--swatch:${theme.surface}"></i></span><span>${theme.name}</span></button>`).join(''); 
-      themesEl.querySelectorAll('.theme-card').forEach(el => el.addEventListener('click', () => { savePoint(); applyTheme(themes.find(t => t.id === el.dataset.theme)); renderDemo(); })); 
+      themesEl.querySelectorAll('.theme-card').forEach(el => el.addEventListener('click', () => { savePoint(); applyTheme(themes.find(t => t.id === el.dataset.theme)); if (importedMode) renderThemes(); else renderDemo(); scheduleAppearanceSave(); }));
     }
 
     function drawRulers() {
@@ -1106,7 +1121,11 @@
         // 群組選取樣式與普通選取區別
         const isSelected = selectedIds.includes(item.id);
         const isGrouped = item.groupId != null;
-        element.className = `demo-item ${item.type||''}${editing ? ' editable' : ''}${isSelected ? ' selected' : ''}${isSelected && isGrouped ? ' grouped-item' : ''}`;
+        element.className = `demo-item ${item.type||''}${editing ? ' editable' : ''}`;
+        const selectionOverlay = document.createElement('div');
+        selectionOverlay.className = `demo-selection-overlay${isGrouped ? ' grouped-item' : ''}`;
+        selectionOverlay.dataset.vfHelper = 'selection';
+        Object.assign(selectionOverlay.style, {left:`${item.x}px`,top:`${item.y}px`,width:`${item.w}px`,height:`${item.h}px`});
         element.dataset.id = item.id;
         const textShadowStyle = item.textShadow ? `text-shadow: 2px 2px 4px ${item.shadowColor || '#000000'};` : '';
         const fontStyle = `font-family: ${item.fontFamily||'Inter'}; font-size: ${item.fontSize||16}px; color: ${item.textColor || '#17202a'}; ${textShadowStyle}`;
@@ -1137,14 +1156,14 @@
           for (const direction of ['n','s','e','w','nw','ne','sw','se','c']) {
             const handle = document.createElement('button'); handle.className = `resize-handle ${direction}`; handle.dataset.direction = direction;
             handle.addEventListener('pointerdown', event => direction === 'c' ? startDemoDrag(event, element) : startDemoResize(event, item, direction));
-            element.appendChild(handle);
+            selectionOverlay.appendChild(handle);
           }
         } else if (editing && selectedIds.includes(item.id) && selectedIds.length > 1) {
           // 群組模式：加一個隱形中央層負責移動，唔俾拉扯
           const handle = document.createElement('button'); handle.className = `resize-handle c`; handle.dataset.direction = 'c';
           handle.style.opacity = '0'; handle.style.width = '100%'; handle.style.height = '100%'; handle.style.cursor = 'move';
           handle.addEventListener('pointerdown', event => startDemoDrag(event, element));
-          element.appendChild(handle);
+          selectionOverlay.appendChild(handle);
         }
         
         element.addEventListener('click', event => {
@@ -1157,6 +1176,7 @@
         });
         element.addEventListener('pointerdown', event => { if (eraserMode || panMode || measureMode || event.button !== 0 || event.target.closest('.resize-handle')) return; startDemoDrag(event); });
         artboard.appendChild(element);
+        if (editing && isSelected) artboard.appendChild(selectionOverlay);
       }
       renderLayers(); renderGuides(); drawRulers();
     }
@@ -1314,7 +1334,7 @@
     function renderGuides() {
       artboard.querySelector('.guide-layer')?.remove();
       if (importedMode) return;
-      const layer = document.createElement('div'); layer.className = 'guide-layer';
+      const layer = document.createElement('div'); layer.className = 'guide-layer'; layer.dataset.vfHelper = 'guides';
       const selected = guideMode === 'hidden' ? [] : items.filter(item => demoGuideTargets.includes(item.id));
       if (guideMode !== 'hidden' && selected.length === 0 && selectedId) selected.push(...items.filter(item => item.id === selectedId));
 
@@ -1439,7 +1459,7 @@
     document.querySelector('#ruler-h').addEventListener('pointerdown', e => { if (e.button === 0 && !eraserMode) addManualGuide('horizontal'); });
     document.querySelector('#ruler-v').addEventListener('pointerdown', e => { if (e.button === 0 && !eraserMode) addManualGuide('vertical'); });
 
-    function isCandidate(element) { return element && element !== importedFrame.contentDocument.body && element !== importedFrame.contentDocument.documentElement && element.id !== 'ui-editor-overlay' && !element.closest('#ui-editor-overlay') && !['STYLE','SCRIPT','META','LINK','TITLE','PATH','CIRCLE','RECT','LINE','POLYLINE','POLYGON','ELLIPSE','G','DEFS','USE'].includes(element.tagName); }
+    function isCandidate(element) { return element && element !== importedFrame.contentDocument.body && element !== importedFrame.contentDocument.documentElement && !element.closest('[data-vf-helper], #ui-editor-overlay') && !['STYLE','SCRIPT','META','LINK','TITLE','PATH','CIRCLE','RECT','LINE','POLYLINE','POLYGON','ELLIPSE','G','DEFS','USE'].includes(element.tagName); }
     function importedCandidate(target) { const preferred = target?.closest?.('button,a,input,textarea,select,svg,img,h1,h2,h3,h4,h5,h6,p,label'); if (preferred && isCandidate(preferred)) return preferred; return target; }
     function importedName(element) {
       let text = '';
@@ -1453,66 +1473,11 @@
       return String(text).replace(/\s+/g, ' ').trim().slice(0, 36);
     }
 
-    function selectImported(element, additive = false) {
-      if (eraserMode || !isCandidate(element)) return;
-      if (additive) { if (!importedSelectedElements.includes(element)) importedSelectedElements.push(element); } else { importedSelectedElements = [element]; }
-      importedSelectedElements = importedSelectionWithGroups(importedSelectedElements);
-      importedSelected = importedSelectedElements[0] || null;
-
-      if (guideArmed && importedSelectedElements.length === 1) {
-        if (!importedGuideTargets.includes(importedSelected)) importedGuideTargets = [...importedGuideTargets, importedSelected];
-        guideArmed = false; guideMode = 'live'; guidesVisible = true; updateToolButtons();
-        renderImportedGuides();
-      }
-
-      importedFrame?.contentDocument?.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
-      importedSelectedElements.forEach(el => {
-          el.classList.add('ui-editor-selected');
-          if (!importedState.has(el)) {
-            const rect = el.getBoundingClientRect(); const computed = window.getComputedStyle(el);
-            importedState.set(el, { 
-              dx:0, dy:0, 
-              width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height)), 
-              widthModified: false,
-              colorOverride: null, originalColor: rgbToHex(computed.backgroundColor),
-              gradient: false, gStart: '#ffffff', gEnd: '#000000', gAngle: 90, boxShadow: false, sX: 0, sY: 10, sBlur: 20, sColor: '#000000',
-              borderRadius: parseFloat(computed.borderRadius) || 0, borderWidth: parseFloat(computed.borderWidth) || 0, borderColor: rgbToHex(computed.borderColor),
-              borderStyle: computed.borderStyle !== 'none' && computed.borderStyle !== '' ? computed.borderStyle.split(' ')[0] : 'solid',
-              baseTransform: el.style.transform || '', textOverride: null, textDirty: false, 
-              fontSize: parseFloat(computed.fontSize) || 16, fontFamily: computed.fontFamily.split(',')[0].replace(/['"]/g, ''), 
-              textColor: rgbToHex(computed.color), textShadow: false, shadowColor: '#000000' 
-            });
-          }
-      });
-      updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector();
-    }
-    
-    function applyImportedState() { 
-      if (importedSelectedElements.length === 0) return; 
-      importedDirty = true; 
-      importedSelectedElements.forEach(el => {
-          const state = importedState.get(el);
-          if (state) {
-            el.style.transform = `${state.baseTransform} translate(${state.dx}px, ${state.dy}px)`;
-            if (state.widthModified) {
-               el.style.boxSizing = 'border-box';
-               el.style.width = `${state.width}px`; el.style.height = `${state.height}px`;
-            }
-            el.style.borderRadius = `${state.borderRadius}px`;
-            if (state.borderWidth > 0) { el.style.border = `${state.borderWidth}px ${state.borderStyle || 'solid'} ${state.borderColor}`; } else { el.style.border = 'none'; }
-            if (state.gradient) { el.style.background = `linear-gradient(${state.gAngle}deg, ${state.gStart}, ${state.gEnd})`; } else { el.style.background = 'none'; el.style.backgroundColor = state.colorOverride || state.originalColor; }
-            if (state.boxShadow) { el.style.boxShadow = `${state.sX}px ${state.sY}px ${state.sBlur}px ${state.sColor}`; } else { el.style.boxShadow = 'none'; }
-            el.style.fontSize = `${state.fontSize}px`; if (state.fontFamily) el.style.fontFamily = state.fontFamily;
-            el.style.color = state.textColor; if (state.textShadow) el.style.textShadow = `2px 2px 4px ${state.shadowColor}`; else el.style.textShadow = 'none';
-          }
-      });
-      updateImportedOverlay();
-    }
-    
     function startImportedDrag(event, element) {
       if (isPositionLocked || eraserMode || !editing || event.button !== 0) return; 
       event.preventDefault(); event.stopPropagation();
       if (!importedSelectedElements.includes(element)) { selectImported(element, event.ctrlKey || event.metaKey); }
+      if (importedSelectedElements.some(el => recordFor(el, false)?.scope === 'all-matching')) { setStatus('拖動請先切換至「僅此元素」，保護同類項的原始位移。'); return; }
       const doc = importedFrame.contentDocument; const target = event.target;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
       
@@ -1521,7 +1486,7 @@
       const sy = win ? win.scrollY : 0;
 
       const initialStates = importedSelectedElements.map(el => {
-          const st = importedState.get(el); const r = el.getBoundingClientRect();
+          const st = syncStateContext(el); const r = el.getBoundingClientRect();
           return { el, x: st.dx, y: st.dy, state: st, baseX: (r.left + sx) - st.dx, baseY: (r.top + sy) - st.dy, w: r.width, h: r.height };
       });
 
@@ -1544,7 +1509,7 @@
         const snap = moveEvent.altKey ? { dx:0, dy:0, snapped:false } : resolveBoxSnap({ minX, minY, maxX, maxY }, geo, { axisLock: dragAxis === 'x' ? 'x' : dragAxis === 'y' ? 'y' : null });
         const finalDx = dx + snap.dx, finalDy = dy + snap.dy;
 
-        initialStates.forEach(item => { item.state.dx = item.x + finalDx; item.state.dy = item.y + finalDy; });
+        initialStates.forEach(item => { item.state.dx = item.x + finalDx; item.state.dy = item.y + finalDy; item.state.positionChanged = true; });
         applyImportedState();
 
         if (snap.snapped) {
@@ -1564,11 +1529,12 @@
     function startImportedResize(event, element, direction) {
       if (eraserMode || !editing || event.button !== 0) return;
       event.preventDefault(); event.stopPropagation();
+      if (recordFor(element, false)?.scope === 'all-matching') { setStatus('同類範圍請使用寬高欄位；控制點可能涉及位移，請先切換至「僅此元素」。'); return; }
       const doc = importedFrame.contentDocument; const target = event.target;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
       
       const startX = event.screenX; const startY = event.screenY;
-      const state = importedState.get(element);
+      const state = syncStateContext(element);
       const original = { dx: state.dx, dy: state.dy, w: state.width, h: state.height };
       const elRect = element.getBoundingClientRect(); 
       const win = importedFrame.contentWindow;
@@ -1584,7 +1550,7 @@
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; suppressImportedClick = true; }
         
-        state.widthModified = true;
+        state.widthModified = true; state.sizeChanged = true;
         let nX = original.dx, nY = original.dy, nW = original.w, nH = original.h;
         let snap = null;
 
@@ -1621,6 +1587,7 @@
           if (nH < 10) { if (direction.includes('n')) nY = original.dy + original.h - 10; nH = 10; }
         }
         
+        state.positionChanged = nX !== state.dx || nY !== state.dy || state.positionChanged;
         state.dx = nX; state.dy = nY; state.width = nW; state.height = nH;
 
         applyImportedState();
@@ -1642,9 +1609,9 @@
     function renderImportedGuides() {
       if (!importedFrame?.contentDocument) return;
       const doc = importedFrame.contentDocument;
-      doc.querySelectorAll('.guide-layer').forEach(el => el.remove());
+      doc.querySelectorAll('[data-vf-helper="guides"]').forEach(el => el.remove());
 
-      const layer = doc.createElement('div'); layer.className = 'guide-layer';
+      const layer = doc.createElement('div'); layer.className = 'guide-layer'; layer.dataset.vfHelper = 'guides';
       Object.assign(layer.style, { position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:'2147483646', overflow:'visible' });
       
       const selected = guideMode === 'hidden' ? [] : importedGuideTargets.filter(el => el && el.isConnected);
@@ -1705,7 +1672,7 @@
     }
 
     function addImportedOverlay() { 
-      const doc = importedFrame.contentDocument; importedOverlay = doc.createElement('div'); importedOverlay.id = 'ui-editor-overlay'; 
+      const doc = importedFrame.contentDocument; importedOverlay = doc.createElement('div'); importedOverlay.id = 'ui-editor-overlay'; importedOverlay.dataset.vfHelper = 'selection';
       importedOverlay.innerHTML = ['n','s','e','w','nw','ne','sw','se','c'].map(direction => `<button class="resize-handle ${direction}" data-direction="${direction}"></button>`).join(''); 
       doc.body.appendChild(importedOverlay); 
       doc.querySelectorAll('#ui-editor-overlay .resize-handle').forEach(handle => handle.addEventListener('pointerdown', event => { 
@@ -1714,28 +1681,30 @@
     }
     
     function updateImportedOverlay() { 
+      importedSelectedElements.forEach(ensureImportedState);
       if (!importedOverlay || importedSelectedElements.length === 0) { if (importedOverlay) importedOverlay.style.display = 'none'; return; }
       let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
       importedSelectedElements.forEach(el => { const rect = el.getBoundingClientRect(); if (rect.left < minL) minL = rect.left; if (rect.top < minT) minT = rect.top; if (rect.right > maxR) maxR = rect.right; if (rect.bottom > maxB) maxB = rect.bottom; });
       const width = maxR - minL; const height = maxB - minT;
-      Object.assign(importedOverlay.style, {position:'absolute', left:`${minL}px`, top:`${minT}px`, width:`${width}px`, height:`${height}px`, margin:'0', zIndex:'2147483647', pointerEvents:'none', display:editing ? 'block' : 'none'}); 
+      Object.assign(importedOverlay.style, {position:'absolute', left:`${minL + importedFrame.contentWindow.scrollX}px`, top:`${minT + importedFrame.contentWindow.scrollY}px`, width:`${width}px`, height:`${height}px`, margin:'0', zIndex:'2147483647', pointerEvents:'none', display:editing ? 'block' : 'none'});
     }
 
     function bindImportedFrame() {
       isIframeLoaded = true;
       const doc = importedFrame.contentDocument; if (!doc?.body) { renderLayers(); return; }
-      const style = doc.createElement('style'); style.id = 'ui-editor-style';
-      style.textContent = '.ui-editor-selected{outline:none!important;outline-offset:0!important;box-shadow:none!important;cursor:move!important}#ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
+      const style = doc.createElement('style'); style.id = 'ui-editor-style'; style.dataset.vfHelper = 'style';
+      style.textContent = '#ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
       const headOrBody = doc.head || doc.body || doc.documentElement;
       if (headOrBody) headOrBody.appendChild(style); 
       addImportedOverlay();
+      refreshAppearanceStyles();
       const all = [...doc.body.querySelectorAll('*')].filter(isCandidate);
-      importedLayers = all.filter(element => { const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; }).slice(0, 80).map(element => ({element, name: importedName(element)}));
+      importedLayers = all.filter(element => { const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; }).slice(0, 1000).map(element => ({element, name: importedName(element)}));
       updateImportedViewport();
       
       doc.addEventListener('pointerdown', event => {
-        if (eraserMode || event.button !== 0 || !editing || event.target.closest('#ui-editor-overlay')) return;
-        if (event.target.closest('.guide-line, .guide-layer')) return;
+        if (eraserMode || panMode || measureMode || event.button !== 0 || !editing || event.target.closest('#ui-editor-overlay')) return;
+        if (event.target.closest('[data-vf-helper="guides"]')) return;
         const element = importedCandidate(event.target); if (!isCandidate(element)) return;
         startImportedDrag(event, element);
       }, true);
@@ -1778,8 +1747,8 @@
                 if (importedSelectedElements.includes(element)) {
                     importedSelectedElements = importedSelectedElements.filter(el => el !== element);
                     importedSelected = importedSelectedElements[0] || null;
-                    importedFrame?.contentDocument?.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
-                    importedSelectedElements.forEach(el => el.classList.add('ui-editor-selected'));
+
+
                     updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector();
                 } else { selectImported(element, true); }
             } else { selectImported(element, false); }
@@ -1788,6 +1757,8 @@
       
       importedFrame.contentWindow.addEventListener('scroll', () => { updateImportedOverlay(); });
 
+      restoreImportedIdentity();
+      watchImportedLayers();
       renderLayers(); if (!isTyping) renderImportedInspector();
     }
 
@@ -1796,20 +1767,24 @@
       const viewWidth = viewportMode === 'mobile' ? 375 : 1280; const viewHeight = viewportMode === 'mobile' ? 812 : 720; 
       importedFrame.style.width = `${viewWidth}px`; importedFrame.style.height = `${viewHeight}px`; importedViewport = { width: viewWidth, height: viewHeight }; 
       artboard.style.width = `${viewWidth}px`; artboard.style.height = `${viewHeight}px`; wrap.style.width = `${viewWidth * zoom}px`; wrap.style.height = `${viewHeight * zoom}px`; artboard.style.transform = `scale(${zoom})`; 
+      refreshAppearanceStyles();
+      importedSelectedElements.forEach(syncStateContext);
       updateImportedOverlay(); drawRulers();
     }
     
     function renderImported() { 
         artboard.className = 'artboard imported-board'; 
         if (!importedFrame) { 
+            isIframeLoaded = false;
             artboard.innerHTML = '<iframe id="imported-frame" class="imported-frame" title="原有 HTML 預覽" sandbox="allow-scripts allow-same-origin"></iframe>'; 
-            artboard.appendChild(measureLayer); 
+            artboard.appendChild(measureLayer);
             importedFrame = document.querySelector('#imported-frame'); 
             let bound = false;
-            const doBind = () => { if (bound) return; bound = true; bindImportedFrame(); setTimeout(() => { updateImportedViewport(); fitView(); }, 100); };
+            const frame = importedFrame; const generation = sourceGeneration;
+            const doBind = () => { if (bound || frame !== importedFrame || generation !== sourceGeneration) return; bound = true; bindImportedFrame(); setTimeout(() => { updateImportedViewport(); fitView(); }, 100); };
             importedFrame.addEventListener('load', doBind, {once:true}); 
-            setTimeout(doBind, 1500); // 1.5秒超時強制載入
-            importedFrame.srcdoc = importedHtml; 
+            setTimeout(() => { if (!bound && frame === importedFrame && generation === sourceGeneration) { setStatus('預覽仍在載入，請檢查外部資源或重新匯入。'); } }, 5000);
+            importedFrame.srcdoc = previewSource(importedHtml);
         } 
         importedFrame.classList.toggle('editing-frame', editing); 
         updateImportedViewport(); 
@@ -1855,10 +1830,11 @@
     function alignSelected(kind) { 
       const selected = importedMode ? importedSelectedElements : selectedDemoItems(); 
       if (!selected.length || ((kind === 'distribute-x' || kind === 'distribute-y') && selected.length < 3)) return;
-      savePoint(); 
+      if (importedMode && selected.some(el => recordFor(el, false)?.scope === 'all-matching')) { setStatus('對齊請先切換至「僅此元素」，避免覆蓋同類元件的原始位移。'); return; }
+      savePoint();
       
       if (importedMode) {
-        const rects = selected.map(el => ({ el, rect: el.getBoundingClientRect(), state: importedState.get(el) }));
+        const rects = selected.map(el => ({ el, rect: el.getBoundingClientRect(), state: syncStateContext(el) }));
         const canvasW = importedViewport.width; const canvasH = importedViewport.height;
 
         if (selected.length === 1) {
@@ -1893,6 +1869,7 @@
                 ordered.forEach((r, i) => { if (i > 0) r.state.dy += (currentTop - r.rect.top); currentTop += r.rect.height + gap; });
             }
         }
+        rects.forEach(r => { r.state.positionChanged = true; r.state.alignIntent = kind; });
         applyImportedState(); if (!isTyping) renderImportedInspector();
       } else {
         const maxWidth = viewportMode === 'mobile' ? 375 : 1280; const maxHeight = viewportMode === 'mobile' ? 812 : 720;
@@ -1976,6 +1953,7 @@
 
     function updateDemo(event, commit = false) {
       const item = selectedDemo(); if (!item) return;
+      if (!demoFieldDirty) savePoint();
       
       item.x = document.querySelector('#x') ? clamp(Number(document.querySelector('#x').value), 0, 2000) : item.x;
       item.y = document.querySelector('#y') ? clamp(Number(document.querySelector('#y').value), 0, 2000) : item.y;
@@ -2010,7 +1988,6 @@
       item.textShadow = document.querySelector('#textShadow')?.checked ?? item.textShadow;
       item.shadowColor = document.querySelector('#shadowColor')?.value ?? item.shadowColor;
 
-      if (!demoFieldDirty) savePoint();
       if (event && event.type === 'input') demoFieldDirty = true;
       if (commit) { demoFieldDirty = false; }
       
@@ -2019,9 +1996,9 @@
 
     function renderImportedInspector() {
       if (!importedSelected) { inspector.innerHTML = '<div class="empty" style="margin-top:24px;">原有畫面已保留。請喺畫布點選。</div>'; return; }
-      const state = importedState.get(importedSelected); 
+      const state = syncStateContext(importedSelected);
       const color = state.colorOverride || state.originalColor || '#ffffff';
-      const textEditable = importedSelected.children.length === 0 && !['IMG','SVG','INPUT','TEXTAREA','SELECT'].includes(importedSelected.tagName);
+      const textEditable = true;
       
       let fontOptions = '';
       availableFonts.forEach(f => { fontOptions += '<option value="' + f + '" ' + (state.fontFamily === f ? 'selected' : '') + '>' + f + '</option>'; });
@@ -2068,7 +2045,7 @@
 
       html += '<div class="section typography-panel"><h2 class="panel-title">🅰 文字與排版</h2>';
       if (textEditable) {
-        html += '<div class="field full"><label>文字內容</label><textarea id="itext" rows="3">' + escapeHtml(state.textOverride ?? importedSelected.textContent) + '</textarea></div>';
+        html += '<div class="field full"><label>文字內容</label><textarea id="itext" rows="3" disabled title="文字內容受保護，不會自動整合">' + escapeHtml(state.textOverride ?? importedSelected.textContent) + '</textarea></div>';
         html += '<div class="form-grid" style="margin-top:6px;">';
         html += '<div class="field full"><label>字體 (Font)</label><select id="ifontFamily">' + fontOptions + '</select></div>';
         html += '<div class="field"><label>文字大小 (px)</label><input type="number" id="ifontSize" value="' + state.fontSize + '"></div>';
@@ -2081,58 +2058,7 @@
       }
       html += '</div>';
 
-      inspector.innerHTML = html;
-    }
-
-    function updateImportedText(event, commit = false) {
-      if (!importedSelected || importedSelected.children.length > 0) return;
-      isTyping = event && event.type === 'input';
-      const state = importedState.get(importedSelected); 
-      state.textOverride = document.querySelector('#itext')?.value ?? state.textOverride; 
-      state.fontFamily = document.querySelector('#ifontFamily')?.value ?? state.fontFamily; 
-      state.fontSize = Number(document.querySelector('#ifontSize')?.value ?? state.fontSize); 
-      state.textColor = document.querySelector('#itextColor')?.value ?? state.textColor;
-      state.textShadow = document.querySelector('#itextShadow')?.checked ?? state.textShadow; 
-      state.shadowColor = document.querySelector('#ishadowColor')?.value ?? state.shadowColor;
-      
-      importedSelected.textContent = state.textOverride; 
-      if (!state.textDirty) { savePoint(); state.textDirty = true; }
-      importedDirty = true; applyImportedState();
-      if (commit) { state.textDirty = false; }
-    }
-
-    function updateImported(event, commit = false) {
-      if (!importedSelected) return;
-      isTyping = event && event.type === 'input';
-      const state = importedState.get(importedSelected); if (!state) return;
-      
-      const newW = Number(document.querySelector('#iw')?.value ?? state.width);
-      const newH = Number(document.querySelector('#ih')?.value ?? state.height);
-      if (newW !== state.width || newH !== state.height) state.widthModified = true;
-
-      state.dx = clamp(Number(document.querySelector('#ix')?.value ?? state.dx), -5000, 5000); 
-      state.dy = clamp(Number(document.querySelector('#iy')?.value ?? state.dy), -5000, 5000);
-      state.width = clamp(newW, 1, 10000); 
-      state.height = clamp(newH, 1, 10000);
-      state.borderRadius = Number(document.querySelector('#iborderRadius')?.value ?? state.borderRadius);
-      state.borderWidth = Number(document.querySelector('#iborderWidth')?.value ?? state.borderWidth);
-      state.borderStyle = document.querySelector('#iborderStyle')?.value ?? state.borderStyle;
-      state.borderColor = document.querySelector('#iborderColor')?.value ?? state.borderColor;
-      state.colorOverride = document.querySelector('#icolor')?.value ?? state.colorOverride;
-      state.gradient = document.querySelector('#igradient')?.checked ?? state.gradient;
-      state.gStart = document.querySelector('#igStart')?.value ?? state.gStart;
-      state.gEnd = document.querySelector('#igEnd')?.value ?? state.gEnd;
-      state.gAngle = Number(document.querySelector('#igAngle')?.value ?? state.gAngle);
-      state.boxShadow = document.querySelector('#ishadow')?.checked ?? state.boxShadow;
-      state.sX = Number(document.querySelector('#isX')?.value ?? state.sX);
-      state.sY = Number(document.querySelector('#isY')?.value ?? state.sY);
-      state.sBlur = Number(document.querySelector('#isBlur')?.value ?? state.sBlur);
-      state.sColor = document.querySelector('#isColor')?.value ?? state.sColor;
-
-      if (!state.fieldDirty) { savePoint(); state.fieldDirty = true; }
-      importedDirty = true; applyImportedState();
-      
-      if (commit) { state.fieldDirty = false; }
+      inspector.innerHTML = html + appearanceInspectorFields();
     }
 
     inspector.addEventListener('input', e => {
@@ -2162,80 +2088,18 @@
         }
     });
 
-    function snapshot() { return JSON.stringify({ items: items.map(i => ({...i})), manualGuides, hiddenDemoGuideKeys, demoGuideTargets, importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets: importedGuideTargets.map(element => importedLayers.findIndex(item => item.element === element)).filter(index => index >= 0), activeTheme, importedMode, importedSourceHtml, importedHtml, importedDirty, editing, zoom, guideMode, eraserMode, viewportMode, isPositionLocked }); }
-    function restoreSnapshot(value) { 
-        const state = JSON.parse(value); 
-        items = state.items || [];
-        manualGuides = state.manualGuides || [];
-        hiddenDemoGuideKeys = state.hiddenDemoGuideKeys || [];
-        demoGuideTargets = state.demoGuideTargets || [];
-        importedManualGuides = state.importedManualGuides || [];
-        hiddenImportedGuideKeys = state.hiddenImportedGuideKeys || [];
-        isPositionLocked = state.isPositionLocked || false;
-        
-        if (importedMode && state.importedHtml !== importedHtml) {
-            importedHtml = state.importedHtml;
-            if (importedFrame) {
-                importedFrame.srcdoc = importedHtml;
-            }
-        }
-        
-        updateToolButtons(); render(); drawRulers(); 
-    }
     function updateHistoryButtons() { document.querySelector('#undo').disabled = history.length === 0; document.querySelector('#redo').disabled = future.length === 0; }
     function savePoint() { history.push(snapshot()); if (history.length > 40) history.shift(); future = []; updateHistoryButtons(); }
     function undo() { if (!history.length) return; future.push(snapshot()); restoreSnapshot(history.pop()); updateHistoryButtons(); }
     function redo() { if (!future.length) return; history.push(snapshot()); restoreSnapshot(future.pop()); updateHistoryButtons(); }
     
-    function performQuickSave() {
-        if (!importedMode || !importedFrame || !importedFrame.contentDocument) {
-            setStatus('暫存功能主要適用於匯入嘅網頁檔案。');
-            return;
-        }
-        const doc = importedFrame.contentDocument;
-        const htmlClone = doc.documentElement.cloneNode(true);
-
-        htmlClone.querySelectorAll('.ui-editor-selected').forEach(el => el.classList.remove('ui-editor-selected'));
-        const overlay = htmlClone.querySelector('#ui-editor-overlay'); if (overlay) overlay.remove();
-        htmlClone.querySelectorAll('.guide-layer, .manual-guide').forEach(el => el.remove());
-        const styleTag = htmlClone.querySelector('#ui-editor-style'); if (styleTag) styleTag.remove();
-        htmlClone.classList.remove('position-locked', 'eraser-mode');
-
-        importedHtml = '<!doctype html>\n' + htmlClone.outerHTML;
-        importedDirty = false;
-        
-        const btn = document.querySelector('#quick-save');
-        if (btn) {
-            const oldBg = btn.style.background;
-            btn.style.background = '#a8f0c6';
-            setTimeout(() => { btn.style.background = oldBg; }, 300);
-        }
-        
-        savePoint();
-        setStatus('💾 已成功暫存！你而家所見嘅修改已經寫入內部記憶體。');
-    }
-
-    document.querySelector('#export').addEventListener('click', () => {
-        if (!importedMode) { setStatus('請先匯入網頁檔案，再進行匯出。'); return; }
-        performQuickSave(); // 匯出前強制幫你暫存一次，確保攞到最新畫面
-        
-        const blob = new Blob([importedHtml], {type: 'text/html;charset=utf-8'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); 
-        a.href = url; 
-        a.download = 'visionflow_export.html'; 
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        setStatus('✅ HTML 檔案已成功匯出到你嘅電腦！');
-    });
-
-    document.querySelector('#quick-save').addEventListener('click', performQuickSave);
+    document.querySelector('#export').addEventListener('click', () => downloadAppearance('html'));
+    document.querySelector('#quick-save').addEventListener('click', () => performQuickSave());
 
     function fitView() { if (!importedMode || !importedFrame) { zoom = 1; zoomLabel.textContent = '100%'; renderDemo(); return; } updateImportedViewport(); const area = document.querySelector('.canvas-scroll'); const ratio = Math.min((area.clientWidth - 32) / importedViewport.width, (area.clientHeight - 32) / importedViewport.height, 1); zoom = clamp(Math.round(ratio * 100) / 100, .1, 1); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; updateImportedViewport(); drawRulers(); }
 
     function fileAsDataUrl(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
-    async function loadSelectedFiles(files) { const htmlFile = files.find(file => /\.html?$/i.test(file.name)); if (!htmlFile) return; try { const reader = new FileReader(); reader.onload = () => { savePoint(); importedMode = true; importedSourceHtml = String(reader.result); importedHtml = importedSourceHtml; importedDirty = false; importedFrame = null; editing = true; isIframeLoaded = false; updateToolButtons(); renderImportedState(); }; reader.readAsText(htmlFile); } catch (error) { setStatus('讀取檔案失敗。'); } }
+
 
     async function toggleFullscreen() {
       if (document.fullscreenElement) { await document.exitFullscreen?.(); return; }
@@ -2253,10 +2117,14 @@
     document.querySelector('#close-inspector-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('right-closed'); setTimeout(() => { fitView(); drawRulers(); }, 180); });
 
     document.querySelector('#edit-mode').addEventListener('click', () => { editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
-    document.querySelector('#toggle-viewport').addEventListener('click', () => { viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) updateImportedViewport(); else renderDemo(); fitView(); });
+    document.querySelector('#toggle-viewport').addEventListener('click', () => { savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
+      importedFrame = null; importedSelected = null; importedSelectedElements = []; importedLayers = []; sourceGeneration++;
+      appearanceRecords = {}; importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = ''; appearanceNotes = '';
+      pendingGroups = []; pendingSelection = []; pendingGuideTargets = []; importedGroupIds = new WeakMap();
+      syncAppearanceControls();
       manualGuides = []; importedManualGuides = []; demoGuideTargets = []; importedGuideTargets = []; hiddenDemoGuideKeys = []; hiddenImportedGuideKeys = [];
       eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; isPositionLocked = false; isIframeLoaded = false; updateToolButtons(); viewportMode = 'desktop'; applyTheme(themes[0]); renderDemo();
     });
@@ -2339,9 +2207,14 @@
     window.addEventListener('resize', invalidateSnapGeometry);
     canvasScroll.addEventListener('scroll', () => { if (activeSnapHover) clearSnapFeedback(); });
 
+
+  </script>
+  <script src="folder-import.js"></script>
+  <script src="appearance.js"></script>
+  <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
-    updateToolButtons();
-    setStatus('就緒。');
+    updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
+    initializeAppearanceEditor();
   </script>
 </body>
 </html>
