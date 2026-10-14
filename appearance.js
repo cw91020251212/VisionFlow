@@ -430,7 +430,9 @@ function snapshot(includePageSessions = true) {
   let staticPreviewHtml = '';
   if (importedMode && importedFrame?.contentDocument?.body) staticPreviewHtml = buildAppearanceHtml();
   return JSON.stringify({
-    version:1, items, selectedId, selectedIds, manualGuides, hiddenDemoGuideKeys, demoGuideTargets,
+    version:2, items, selectedId, selectedIds, manualGuides, hiddenDemoGuideKeys, demoGuideTargets,
+    toolPreferences:{snapEnabled:SNAP_CFG.enabled,snapGrid:SNAP_CFG.grid,activeSnapHover},
+    measure:persistedMeasure(), workspacePanels:normalWorkspacePanels(),
     importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets:importedGuideTargets.filter(el=>el.isConnected).map(el=>ensureImportedState(el).target),
     activeTheme, importedMode, importedSourceHtml, importedHtml, importedPreparedHtml, staticPreviewHtml, importedDirty, editing, zoom, guideMode, guideArmed,
     eraserMode, panMode, measureMode, viewportMode, isPositionLocked, appearanceRecords, appearanceSource, appearanceNotes, appearanceState,
@@ -440,8 +442,8 @@ function snapshot(includePageSessions = true) {
   });
 }
 function restoreSnapshot(value, fromDraft = false) {
-  const s = JSON.parse(value), sameDocument = importedMode && s.importedMode && s.importedSourceHtml === importedSourceHtml && s.importedHtml === importedHtml;
-  if (s.version !== 1 || !Array.isArray(s.items)) throw new Error('不支援或損壞的草稿版本；原始草稿仍保留，可下載備份。');
+  const s = readDraftSnapshot(value), sameDocument = importedMode && s.importedMode && s.importedSourceHtml === importedSourceHtml && s.importedHtml === importedHtml;
+  cancelTransientTools(); zoomRevision++; fitImportedOnLoad=false;
   importRequestSequence++;
   if (s.pageSessions !== undefined) pageSessions = s.pageSessions || {};
   folderPagePaths = s.folderPagePaths || []; folderSetKey = s.folderSetKey || '';
@@ -456,13 +458,16 @@ function restoreSnapshot(value, fromDraft = false) {
   if (fromDraft && s.staticPreviewHtml) importedHtml=s.staticPreviewHtml;
   importedDirty=!!s.importedDirty; editing=!!s.editing; zoom=s.zoom||1; guideMode=s.guideMode||'hidden'; guidesVisible=guideMode!=='hidden'; guideArmed=!!s.guideArmed;
   eraserMode=!!s.eraserMode; panMode=!!s.panMode; measureMode=!!s.measureMode; viewportMode=s.viewportMode||'desktop'; isPositionLocked=!!s.isPositionLocked;
+  SNAP_CFG.enabled=s.toolPreferences.snapEnabled; SNAP_CFG.grid=s.toolPreferences.snapGrid; activeSnapHover=s.toolPreferences.activeSnapHover;
+  measureMode=s.measure.enabled; measureState=s.measure.state; measureStart={...s.measure.start}; measureEnd={...s.measure.end};
+  restoreWorkspacePanels(s.workspacePanels);
   appearanceRecords=s.appearanceRecords||{}; appearanceSource=s.appearanceSource||appearanceSource; appearanceNotes=s.appearanceNotes||''; appearanceState=s.appearanceState||'default';
   importedGroupSeq=s.importedGroupSeq||0;
   pendingSelection=s.selectedTargets||[]; pendingGroups=s.groups||[]; pendingGuideTargets=s.importedGuideTargets||[];
   isTyping=false;
   if (!sameDocument) { importedFrame=null; importedSelected=null; importedSelectedElements=[]; importedLayers=[]; sourceGeneration++; }
   else { importedLayers.forEach(l=>importedState.delete(l.element)); refreshAppearanceStyles(); restoreImportedIdentity(); }
-  syncAppearanceControls(); applyTheme(themes.find(t=>t.id===activeTheme)||themes[0]); updateToolButtons(); render(); zoomLabel.textContent=`${Math.round(zoom*100)}%`; drawRulers(); scheduleAppearanceSave();
+  syncAppearanceControls(); applyTheme(themes.find(t=>t.id===activeTheme)||themes[0]); updateToolButtons(); render(); refreshLayoutAndRulers(); scheduleAppearanceSave();
 }
 function restoreImportedIdentity() {
   importedGroupIds=new WeakMap();
@@ -492,12 +497,23 @@ function watchImportedLayers() {
   observer.observe(doc.body,{childList:true,subtree:true});
 }
 function scheduleAppearanceSave() {
-  clearTimeout(appearanceAutosaveTimer); appearanceAutosaveTimer=setTimeout(()=>performQuickSave(true),350);
+  clearTimeout(appearanceAutosaveTimer);
+  if (snapDragActive || guideDrag || isPanning || isErasing) return;
+  appearanceAutosaveTimer=setTimeout(()=>performQuickSave(true),350);
 }
 function performQuickSave(silent = false) {
   try {
     if (draftRecoveryBlocked) { setStatus('原草稿無法恢復，已停止自動覆寫；請先下載草稿備份。'); return; }
-    localStorage.setItem(DRAFT_KEY,snapshot()); importedDirty=false;
+    if (snapDragActive || guideDrag || isPanning || isErasing) { if (!silent) setStatus('手勢進行中，請完成拖動後再暫存；尚未覆寫草稿。'); return; }
+    const previous=localStorage.getItem(DRAFT_KEY);
+    if (previous !== null) {
+      try { readDraftSnapshot(previous); }
+      catch { draftRecoveryBlocked=true; clearTimeout(appearanceAutosaveTimer); setStatus('已存草稿版本或內容已改變，停止自動覆寫；請先下載草稿備份。'); return; }
+    }
+    const value=snapshot();
+    if (previous !== null && JSON.parse(previous).version === 1 && localStorage.getItem(DRAFT_KEY+'-backup-before-v2') === null)
+      localStorage.setItem(DRAFT_KEY+'-backup-before-v2',previous);
+    localStorage.setItem(DRAFT_KEY,value); importedDirty=false; updateLegacyDraftBackupButton();
     if (!silent) setStatus('外觀資料與原始來源已存入此瀏覽器。刷新可恢復；重要修改請另行匯出。');
   } catch (e) { setStatus('草稿儲存失敗（容量或瀏覽器權限）；請立即匯出外觀 HTML／JSON。'); }
 }
@@ -580,6 +596,7 @@ async function loadSelectedFiles(files, entryPath, switchingPage = false) {
     const pageSelect=document.getElementById('vf-entry-page');
     pageSelect.innerHTML=prepared.pages.map(p=>`<option value="${escapeHtml(p.path)}" ${p.path === prepared.entryPath ? 'selected' : ''}>${escapeHtml(p.path)}</option>`).join('');
     pageSelect.disabled=prepared.pages.length<2;
+    cancelTransientTools(); measureState='idle'; measureStart={x:0,y:0}; measureEnd={x:0,y:0}; fitImportedOnLoad=true;
     syncAppearanceControls(); updateToolButtons(); renderImportedState(); scheduleAppearanceSave();
     const message='只編輯目前入口頁。'+(trustedScripts ? '可信脚本預覽已開啟，執行狀態不保證可保存。' : '脚本預設停用；原始程式保留於來源，不進入外觀 JSON。');
     setStatus(message);
@@ -616,9 +633,11 @@ function initializeAppearanceEditor() {
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden') performQuickSave(true);});
   document.querySelector('.main-toolbar').addEventListener('click',()=>scheduleAppearanceSave());
   document.getElementById('vf-backup-draft').addEventListener('click',downloadDraftBackup);
+  document.getElementById('vf-backup-v1').addEventListener('click',()=>downloadDraftBackup(true));
+  updateLegacyDraftBackupButton();
   syncAppearanceControls();
   try {
     const draft=localStorage.getItem(DRAFT_KEY);
-    if(draft !== null) { restoreSnapshot(draft,true); setStatus('已從此瀏覽器恢復靜態外觀草稿。脚本停用；如需功能預覽，請重新啟用可信原始程式。'); }
+    if(draft !== null) { restoreSnapshot(draft,true); setStatus(restoredDraftMessage()); }
   } catch(e) { draftRecoveryBlocked=true; clearTimeout(appearanceAutosaveTimer); setStatus('無法恢復草稿：'+e.message+'。已停止自動覆寫，請用「備份草稿」下載原始資料。'); }
 }

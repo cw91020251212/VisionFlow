@@ -65,11 +65,18 @@ function downloadTextFile(content, filename, kind) {
   try { anchor.click(); } finally { anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
-function downloadDraftBackup() {
+function updateLegacyDraftBackupButton() {
+  const button=document.getElementById('vf-backup-v1');
+  try { button.disabled=localStorage.getItem(DRAFT_KEY+'-backup-before-v2') === null; }
+  catch { button.disabled=true; }
+}
+function downloadDraftBackup(legacy = false) {
   try {
     // Copy the exact stored bytes; even a damaged/unknown draft can be recovered offline.
-    const raw = localStorage.getItem(DRAFT_KEY);
-    downloadTextFile(raw === null ? snapshot() : raw, 'visionflow-draft-backup.json', 'json');
+    const old = legacy === true;
+    const raw = localStorage.getItem(old ? DRAFT_KEY+'-backup-before-v2' : DRAFT_KEY);
+    if (old && raw === null) throw new Error('尚無升級前草稿備份。');
+    downloadTextFile(raw === null ? snapshot() : raw, old ? 'visionflow-draft-before-v2.json' : 'visionflow-draft-backup.json', 'json');
     setStatus('已下載草稿原始備份，未清除或覆寫本機草稿。此備份供復原排錯；日常交接請用畫布／外觀 JSON。');
   } catch (error) { sysAlert('草稿備份失敗：' + error.message); }
 }

@@ -274,11 +274,12 @@
         <button class="button icon-btn" id="pan-tool" title="平移畫布 (按住畫布拖拉)">✥</button>
         <button class="button icon-btn" id="measure-tool" title="捲尺測量 (點擊起點，再點擊終點)">📏</button>
         <button class="button icon-btn" id="focus-mode" title="全螢幕模式">⛶</button>
-        <button class="button icon-btn" id="focus-exit" style="display:none;">退出</button>
+        <button class="button icon-btn" id="focus-exit" title="退出全屏或專注檢視">退出</button>
         <div class="toolbar-divider"></div>
         <button class="button" id="zoom-out">−</button>
         <span class="zoom" id="zoom-label">100%</span>
         <button class="button" id="zoom-in">＋</button>
+        <button class="button" id="fit-view" title="依目前可用空間適配畫布">適配</button>
       </div>
       
       <div class="toolbar-group">
@@ -311,6 +312,7 @@
             <div class="field full"><label>原始頁面路徑</label><input id="vf-page-path" value="/"></div>
             <div class="field full"><label>補充說明（交給整合 AI）</label><textarea id="vf-user-notes" rows="3"></textarea></div>
             <div class="field full"><label>外觀狀態（編輯中模擬；匯出使用實際狀態 CSS）</label><select id="vf-edit-state"><option value="default">Default</option><option value="hover">Hover</option><option value="focus">Focus</option><option value="disabled">Disabled</option><option value="loading">Loading</option></select></div>
+            <div class="field full"><button class="button" id="vf-backup-v1" disabled>下載升級前草稿</button><p class="hint">首次將 v1 草稿升級時原樣保留，不覆寫既有備份；備份供復原排錯。</p></div>
           </div>
         </section>
         <section class="section">
@@ -685,6 +687,7 @@
       if (!panMode || e.button !== 0) return;
       isPanning = true; app.classList.add('panning'); panStart = { x: e.clientX, y: e.clientY, scrollLeft: canvasScroll.scrollLeft, scrollTop: canvasScroll.scrollTop };
       try { canvasScroll.setPointerCapture(e.pointerId); } catch(err){}
+      registerEditorGesture(()=>{try{canvasScroll.releasePointerCapture(e.pointerId);}catch{}isPanning=false;app.classList.remove('panning');});
       e.preventDefault();
     });
     canvasScroll.addEventListener('pointermove', e => {
@@ -692,7 +695,7 @@
       canvasScroll.scrollLeft = panStart.scrollLeft - (e.clientX - panStart.x); canvasScroll.scrollTop = panStart.scrollTop - (e.clientY - panStart.y);
     });
     canvasScroll.addEventListener('pointerup', e => {
-      if (isPanning) { isPanning = false; app.classList.remove('panning'); try { canvasScroll.releasePointerCapture(e.pointerId); } catch(err){} }
+      if (isPanning) { isPanning = false; cancelEditorGesture=null; app.classList.remove('panning'); try { canvasScroll.releasePointerCapture(e.pointerId); } catch(err){} scheduleAppearanceSave(); }
     });
 
     document.querySelector('#measure-tool').addEventListener('click', () => {
@@ -729,11 +732,14 @@
           measureEnd = {x: snapped.x, y: snapped.y}; measureState = 'done'; updateMeasureLine();
           setStatus('尺寸已鎖定。再點擊畫布可重新量度，或點擊捲尺按鈕關閉。');
       }
+      scheduleAppearanceSave();
     });
 
     function updateMeasureLine(reset = false) {
         const line = document.querySelector('#measure-line'); const label = document.querySelector('#measure-label');
-        if (reset) { line.style.width = '0px'; label.textContent = ''; return; }
+        document.querySelector('#measure-indicator').style.display = 'none';
+        line.style.display = measureState === 'idle' ? 'none' : 'block';
+        if (reset || measureState === 'idle') { line.style.width = '0px'; label.textContent = ''; return; }
         const dx = measureEnd.x - measureStart.x; const dy = measureEnd.y - measureStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy); const angle = Math.atan2(dy, dx) * 180 / Math.PI;
         line.style.left = `${measureStart.x}px`; line.style.top = `${measureStart.y}px`;
@@ -931,6 +937,7 @@
       document.querySelector('#snap-grid-toggle')?.classList.toggle('active-tool', SNAP_CFG.grid);
       app.classList.toggle('eraser-mode', eraserMode); app.classList.toggle('pan-mode', panMode); app.classList.toggle('measure-mode', measureMode);
       app.classList.toggle('position-locked', isPositionLocked);
+      updateMeasureLine();
       if (importedFrame?.contentDocument?.documentElement) {
           if (importedOverlay) importedOverlay.querySelector('.resize-handle.c').style.display = isPositionLocked ? 'none' : '';
       }
@@ -1228,9 +1235,11 @@
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
+        cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) { renderDemo(); if(!isTyping) renderDemoInspector(); }
+        if (!upEvent.cancelled && moved) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
       }
+      registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
     }
     
@@ -1303,9 +1312,11 @@
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
+        cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) { renderDemo(); if(!isTyping) renderDemoInspector(); }
+        if (!upEvent.cancelled && moved) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
       }
+      registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
     }
 
@@ -1417,11 +1428,13 @@
         }
       }
 
-      function stop() {
+      function stop(upEvent) {
         evtDoc.removeEventListener('pointermove', move);
         evtDoc.removeEventListener('pointerup', stop);
+        cancelEditorGesture=null;
         document.body.style.cursor = '';
         guideDrag = null; snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
+        if (upEvent?.cancelled) return;
         
         const finalPos = list[index].position;
         const limit = importedMode ? (kind === 'vertical' ? importedViewport.width : importedViewport.height) : (kind === 'vertical' ? (viewportMode === 'mobile' ? 375 : 1280) : (viewportMode === 'mobile' ? 812 : 720));
@@ -1430,7 +1443,9 @@
         } else {
             if (importedMode) renderImportedGuides(); else renderGuides();
         }
+        scheduleAppearanceSave();
       }
+      registerEditorGesture(()=>stop({cancelled:true}));
       evtDoc.addEventListener('pointermove', move); evtDoc.addEventListener('pointerup', stop);
     }
 
@@ -1498,9 +1513,11 @@
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', stop);
+        cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) if (!isTyping) renderImportedInspector();
+        if (!upEvent.cancelled && moved) { if (!isTyping) renderImportedInspector(); scheduleAppearanceSave(); }
       }
+      registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       doc.addEventListener('pointermove', move); doc.addEventListener('pointerup', stop);
     }
     
@@ -1578,9 +1595,11 @@
       function stop(upEvent) {
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', stop);
+        cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (moved) if (!isTyping) renderImportedInspector();
+        if (!upEvent.cancelled && moved) { if (!isTyping) renderImportedInspector(); scheduleAppearanceSave(); }
       }
+      registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       doc.addEventListener('pointermove', move); doc.addEventListener('pointerup', stop);
     }
     
@@ -1759,7 +1778,15 @@
             importedFrame = document.querySelector('#imported-frame'); 
             let bound = false;
             const frame = importedFrame; const generation = sourceGeneration;
-            const doBind = () => { if (bound || frame !== importedFrame || generation !== sourceGeneration) return; bound = true; bindImportedFrame(); setTimeout(() => { updateImportedViewport(); fitView(); }, 100); };
+            const shouldFit = fitImportedOnLoad; const initialZoomRevision = zoomRevision; fitImportedOnLoad=false;
+            const doBind = () => {
+              if (bound || frame !== importedFrame || generation !== sourceGeneration) return;
+              bound = true; bindImportedFrame();
+              setTimeout(() => {
+                if (frame !== importedFrame || generation !== sourceGeneration) return;
+                if (shouldFit && initialZoomRevision === zoomRevision) fitImportedView(); else refreshLayoutAndRulers();
+              },100);
+            };
             importedFrame.addEventListener('load', doBind, {once:true}); 
             setTimeout(() => { if (!bound && frame === importedFrame && generation === sourceGeneration) { setStatus('預覽仍在載入，請檢查外部資源或重新匯入。'); } }, 5000);
             importedFrame.srcdoc = previewSource(importedHtml);
@@ -2074,31 +2101,21 @@
     document.querySelector('#export').addEventListener('click', () => downloadAppearance('html'));
     document.querySelector('#quick-save').addEventListener('click', () => performQuickSave());
 
-    function fitView() { if (!importedMode || !importedFrame) { zoom = 1; zoomLabel.textContent = '100%'; renderDemo(); return; } updateImportedViewport(); const area = document.querySelector('.canvas-scroll'); const ratio = Math.min((area.clientWidth - 32) / importedViewport.width, (area.clientHeight - 32) / importedViewport.height, 1); zoom = clamp(Math.round(ratio * 100) / 100, .1, 1); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; updateImportedViewport(); drawRulers(); }
-
     function fileAsDataUrl(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
 
+    document.querySelector('#toggle-left').addEventListener('click', () => { document.querySelector('.workspace').classList.toggle('left-closed'); scheduleLayoutRefresh(); });
+    document.querySelector('#toggle-right').addEventListener('click', () => { document.querySelector('.workspace').classList.toggle('right-closed'); scheduleLayoutRefresh(); });
 
-    async function toggleFullscreen() {
-      if (document.fullscreenElement) { await document.exitFullscreen?.(); return; }
-      try { await document.documentElement.requestFullscreen(); } catch (error) {
-        app.classList.toggle('focus-mode'); const isFocus = app.classList.contains('focus-mode');
-        if (isFocus) { document.querySelector('.workspace').classList.add('left-closed', 'right-closed'); }
-        setTimeout(() => { fitView(); drawRulers(); }, 50);
-      }
-    }
-
-    document.querySelector('#toggle-left').addEventListener('click', () => { document.querySelector('.workspace').classList.toggle('left-closed'); setTimeout(() => { fitView(); drawRulers(); }, 180); });
-    document.querySelector('#toggle-right').addEventListener('click', () => { document.querySelector('.workspace').classList.toggle('right-closed'); setTimeout(() => { fitView(); drawRulers(); }, 180); });
-    
-    document.querySelector('#close-sidebar-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('left-closed'); setTimeout(() => { fitView(); drawRulers(); }, 180); });
-    document.querySelector('#close-inspector-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('right-closed'); setTimeout(() => { fitView(); drawRulers(); }, 180); });
+    document.querySelector('#close-sidebar-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('left-closed'); scheduleLayoutRefresh(); });
+    document.querySelector('#close-inspector-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('right-closed'); scheduleLayoutRefresh(); });
+    document.querySelector('#fit-view').addEventListener('click',()=>fitView());
 
     document.querySelector('#edit-mode').addEventListener('click', () => { editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
     document.querySelector('#toggle-viewport').addEventListener('click', () => { savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
       importRequestSequence++;
+      cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
       importedFrame = null; importedSelected = null; importedSelectedElements = []; importedLayers = []; sourceGeneration++;
       appearanceRecords = {}; importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = ''; appearanceNotes = '';
@@ -2109,8 +2126,8 @@
       eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; isPositionLocked = false; isIframeLoaded = false; updateToolButtons(); viewportMode = 'desktop'; applyTheme(themes[0]); renderDemo();
     });
     
-    document.querySelector('#zoom-in').addEventListener('click', () => { zoom = clamp(zoom + .1, .1, 1.5); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; invalidateSnapGeometry(); clearSnapFeedback(); snapLayerEl(); if (importedMode) updateImportedViewport(); else renderDemo(); drawRulers(); });
-    document.querySelector('#zoom-out').addEventListener('click', () => { zoom = clamp(zoom - .1, .1, 1.5); zoomLabel.textContent = `${Math.round(zoom * 100)}%`; invalidateSnapGeometry(); clearSnapFeedback(); snapLayerEl(); if (importedMode) updateImportedViewport(); else renderDemo(); drawRulers(); });
+    document.querySelector('#zoom-in').addEventListener('click', () => { zoomRevision++; zoom = clamp(zoom + .1, .1, 1.5); refreshLayoutAndRulers(); });
+    document.querySelector('#zoom-out').addEventListener('click', () => { zoomRevision++; zoom = clamp(zoom - .1, .1, 1.5); refreshLayoutAndRulers(); });
     
     document.querySelector('#snap-toggle').addEventListener('click', () => {
       SNAP_CFG.enabled = !SNAP_CFG.enabled;
@@ -2152,8 +2169,8 @@
     document.querySelector('#file-input').addEventListener('change', event => loadSelectedFiles([...event.target.files]));
     document.querySelector('#folder-input').addEventListener('change', event => loadSelectedFiles([...event.target.files]));
     
-    document.querySelector('#focus-mode').addEventListener('click', toggleFullscreen); document.querySelector('#focus-exit').addEventListener('click', toggleFullscreen);
-    document.addEventListener('fullscreenchange', () => { const full = Boolean(document.fullscreenElement); app.classList.toggle('focus-mode', full); if (full) { document.querySelector('.workspace').classList.add('left-closed', 'right-closed'); } setTimeout(() => { fitView(); drawRulers(); }, 50); });
+    document.querySelector('#focus-mode').addEventListener('click',()=>toggleFullscreen()); document.querySelector('#focus-exit').addEventListener('click',()=>toggleFullscreen());
+    document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) enterFocusMode(); else leaveFocusMode(); });
     
     function initResizers() {
       const workspace = document.querySelector('.workspace');
@@ -2184,12 +2201,13 @@
       else if (k === 'g') { e.preventDefault(); document.querySelector('#snap-grid-toggle').click(); }
     });
 
-    window.addEventListener('resize', invalidateSnapGeometry);
+    window.addEventListener('resize',()=>scheduleLayoutRefresh());
     canvasScroll.addEventListener('scroll', () => { if (activeSnapHover) clearSnapFeedback(); });
 
 
   </script>
   <script src="folder-import.js"></script>
+  <script src="workspace-state.js"></script>
   <script src="canvas.js"></script>
   <script src="project-io.js"></script>
   <script src="appearance.js"></script>

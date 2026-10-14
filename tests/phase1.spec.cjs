@@ -244,8 +244,8 @@ test('reset cancels a pending slow import instead of resurrecting the old page',
 test('legacy v1 draft without new origin or page-session fields still restores', async ({page,browser}) => {
   await loadOriginal(page);await editRadius(page,18);
   const raw=await page.evaluate(()=>{
-    const value=JSON.parse(snapshot());
-    for(const key of ['pageSessions','folderSetKey','folderPagePaths','exportedAppearanceFingerprint','initialAppearanceFingerprint'])delete value[key];
+    const value=JSON.parse(snapshot());value.version=1;
+    for(const key of ['pageSessions','folderSetKey','folderPagePaths','exportedAppearanceFingerprint','initialAppearanceFingerprint','toolPreferences','measure','workspacePanels'])delete value[key];
     delete value.appearanceSource.origin;return JSON.stringify(value);
   });
   const context=await browser.newContext({baseURL:'http://127.0.0.1:8765'});const p=await context.newPage();
@@ -253,6 +253,7 @@ test('legacy v1 draft without new origin or page-session fields still restores',
   await p.goto('/');await p.waitForFunction(()=>isIframeLoaded && importedFrame?.contentDocument.getElementById('card'));
   expect(await p.frameLocator('#imported-frame').locator('#card').evaluate(el=>getComputedStyle(el).borderRadius)).toBe('18px');
   expect(await p.evaluate(()=>draftRecoveryBlocked)).toBe(false);
-  await p.click('#quick-save');expect(await p.evaluate(()=>JSON.parse(localStorage.getItem(DRAFT_KEY)).version)).toBe(1);
+  await p.click('#quick-save');expect(await p.evaluate(()=>JSON.parse(localStorage.getItem(DRAFT_KEY)).version)).toBe(2);
+  expect(await p.evaluate(()=>localStorage.getItem(DRAFT_KEY+'-backup-before-v2'))).toBe(raw);
   await context.close();
 });

@@ -134,6 +134,8 @@ function buildCanvasHtml() {
 function importCanvasData(value) {
   const data = validateCanvasData(value); // Validate completely before changing the current design.
   savePoint();
+  cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
+  measureState='idle'; measureStart={x:0,y:0}; measureEnd={x:0,y:0};
   sourceGeneration++; importedMode = false; importedFrame = null;
   importedSelected = null; importedSelectedElements = []; importedLayers = [];
   importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = '';
