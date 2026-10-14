@@ -1,9 +1,9 @@
 // Only the editor shell is cached; imported files and user designs are never stored here.
-const APP_VERSION = 'background-textures-v1';
+const APP_VERSION = 'maintenance-controls-v2';
 const SCOPE = self.registration.scope;
 const CACHE_PREFIX = 'visionflow-app:' + encodeURIComponent(SCOPE) + ':';
 const CACHE_NAME = CACHE_PREFIX + APP_VERSION;
-const APP_FILES = ['index.html', 'appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'pointer-tools.js', 'delivery.js', 'background-image.js', 'icon.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'manifest.json'];
+const APP_FILES = ['index.html', 'appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'pointer-tools.js', 'delivery.js', 'background-image.js', 'maintenance.js', 'icon.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'manifest.json'];
 const APP_URLS = APP_FILES.map(path => new URL(path, SCOPE).href);
 
 self.addEventListener('install', event => {
@@ -28,14 +28,21 @@ self.addEventListener('fetch', event => {
     return response || new Response('Editor cache incomplete. Reconnect and update the editor.', {status:503,headers:{'Content-Type':'text/plain;charset=utf-8'}});
   }));
 });
+async function editorWindowClients() {
+  const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  return windows.filter(client => {
+    try { const url=new URL(client.url); return url.origin===new URL(SCOPE).origin && [SCOPE,new URL('index.html',SCOPE).href].includes(url.origin+url.pathname); }
+    catch { return false; }
+  });
+}
 self.addEventListener('message', event => {
+  if (event.data?.type === 'VF_MAINTENANCE_CHECK') {
+    event.waitUntil(editorWindowClients().then(clients => event.ports[0]?.postMessage({type:'VF_EDITOR_CLIENT_COUNT',count:clients.length})));
+    return;
+  }
   if (event.data?.type !== 'VF_ACTIVATE_UPDATE') return;
   event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    const editorWindows = windows.filter(client => {
-      try { const url=new URL(client.url); return url.origin===new URL(SCOPE).origin && [SCOPE,new URL('index.html',SCOPE).href].includes(url.origin+url.pathname); }
-      catch { return false; }
-    });
+    const editorWindows = await editorWindowClients();
     if (editorWindows.length > 1) {
       event.source?.postMessage({type:'VF_UPDATE_BLOCKED',message:'請先關閉其他 VisionFlow 分頁，再更新；未刷新其他分頁或清除草稿。'});
       return;

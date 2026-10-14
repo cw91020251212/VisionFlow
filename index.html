@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-HK">
 <head>
+  <meta name="visionflow-app-version" content="maintenance-controls-v2">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionFlow | 專業網頁視覺設計</title>
@@ -370,9 +371,17 @@
         <div id="inspector-content" class="empty" style="margin-top: 24px;">請喺畫布點選物件以編輯屬性。</div>
       </aside>
     </main>
-    <footer class="footer"><span id="vf-offline-state" role="status">離線快取檢查中</span><button class="button" id="vf-update-app" hidden>保存並更新</button><span class="small-screen-hint">工具列可左右滑動；建議使用電腦編輯。</span><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原 / <kbd>Ctrl</kbd> + <kbd>G</kbd> 群組</span></footer>
+    <footer class="footer"><button class="button" id="vf-maintenance" aria-haspopup="dialog">暫存／更新／還原</button><span id="vf-offline-state" role="status">離線快取檢查中</span><button class="button" id="vf-update-app" hidden>保存並更新</button><span class="small-screen-hint">工具列可左右滑動；建議使用電腦編輯。</span><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原 / <kbd>Ctrl</kbd> + <kbd>G</kbd> 群組</span></footer>
   </div>
   
+  <dialog id="vf-maintenance-dialog" aria-labelledby="vf-maintenance-title">
+    <form method="dialog" class="dialog-head"><h2 id="vf-maintenance-title">暫存／更新／還原</h2><button class="button" id="vf-maintenance-close" aria-label="關閉維護">關閉</button></form>
+    <p>目前程式版本：<code id="vf-maintenance-version"></code></p>
+    <section class="section"><h3>清除所有程式暫存</h3><p>先保存設計，清除此 VisionFlow 的離線程式快取及記憶體暫態，再重新載入。保留草稿與備份，不清整個瀏覽器的 HTTP 快取或其他網站資料。</p><button class="button" id="vf-maintenance-clear" data-maintenance>清除暫存並重新載入</button></section>
+    <section class="section"><h3>更新</h3><p>手動檢查新版。完整下載後才顯示「保存並更新」，不自動刷新或刪除設計。</p><div class="dialog-actions"><button class="button" id="vf-maintenance-check" data-maintenance>檢查更新</button><button class="button primary" id="vf-maintenance-apply" data-maintenance hidden>保存並更新</button></div></section>
+    <section class="section"><h3>還原出廠狀態</h3><p><strong>會刪除已保存的 VisionFlow 草稿、升級備份、設定及目前未匯出的設計，無法撤銷。</strong>重新開啟空白預設；不刪原始 HTML／圖片。請先下載備份，並關閉其他 VisionFlow 分頁／桌面 App，清理中不要另開分頁。</p><div class="dialog-actions"><button class="button" id="vf-maintenance-backup" data-maintenance>先下載草稿備份</button><button class="button" id="vf-maintenance-factory" data-maintenance style="color:#b42318;border-color:#b42318">還原出廠狀態</button></div></section>
+    <p id="vf-maintenance-result" role="status" aria-live="polite">清除程式快取與刪除設計是兩個不同操作，執行前會再確認。</p>
+  </dialog>
   <dialog id="vf-share-dialog" aria-labelledby="vf-share-title">
     <form method="dialog" class="dialog-head"><h2 id="vf-share-title">分享目前設計</h2><button class="button" aria-label="關閉分享">關閉</button></form>
     <label for="vf-share-format">檔案格式</label><select id="vf-share-format"><option value="html">HTML · 可看外觀並重新匯入</option><option value="json">JSON · 交給 AI／開發者</option></select>
@@ -2093,14 +2102,15 @@
 
 
   </script>
-  <script src="folder-import.js"></script>
-  <script src="workspace-state.js"></script>
-  <script src="pointer-tools.js"></script>
-  <script src="background-image.js"></script>
-  <script src="canvas.js"></script>
-  <script src="project-io.js"></script>
-  <script src="appearance.js"></script>
-  <script src="delivery.js"></script>
+  <script src="folder-import.js?v=maintenance-controls-v2"></script>
+  <script src="workspace-state.js?v=maintenance-controls-v2"></script>
+  <script src="pointer-tools.js?v=maintenance-controls-v2"></script>
+  <script src="background-image.js?v=maintenance-controls-v2"></script>
+  <script src="canvas.js?v=maintenance-controls-v2"></script>
+  <script src="project-io.js?v=maintenance-controls-v2"></script>
+  <script src="appearance.js?v=maintenance-controls-v2"></script>
+  <script src="maintenance.js?v=maintenance-controls-v2"></script>
+  <script src="delivery.js?v=maintenance-controls-v2"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');

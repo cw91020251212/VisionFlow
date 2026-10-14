@@ -3,6 +3,7 @@
 const BACKGROUND_DATA_LIMIT = 2 * 1024 * 1024;
 const BACKGROUND_KEYS = ['background-image','background-size','background-position','background-repeat'];
 let backgroundRequestSequence = 0;
+let pendingBackgroundRequest = null;
 function cancelBackgroundUpload() { backgroundRequestSequence++; }
 function rasterMime(bytes) {
   if ([137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)) return 'image/png';
@@ -93,7 +94,9 @@ function writeBackgroundStyles(styles,restore=false) {
 function activeSingleBackground() {return importedMode?importedSelectedElements.length===1 && importedSelected?.isConnected:selectedIds.length===1 && !!selectedDemo();}
 async function uploadSelectedBackground(field) {
   const file=field.files?.[0];if(!file || !activeSingleBackground())return;
+  if (updateRequested || maintenanceStoragePaused) { setStatus('更新／維護正在套用，貼圖未更改；請完成後重新選擇圖片。'); return; }
   const request=++backgroundRequestSequence,mode=importedMode,target=mode?importedSelected:selectedDemo(),generation=sourceGeneration,viewport=viewportMode,state=appearanceState;
+  pendingBackgroundRequest = request;
   const scope=mode?recordFor(target,false)?.scope||'this-element':null;
   function stillCurrent(){return request===backgroundRequestSequence && field.isConnected && mode===importedMode && generation===sourceGeneration && viewport===viewportMode && state===appearanceState && activeSingleBackground() && target===(mode?importedSelected:selectedDemo()) && (!mode || scope===(recordFor(target,false)?.scope||'this-element'));}
   document.getElementById('bg-result').textContent='正在讀取本機圖片…';
@@ -103,6 +106,7 @@ async function uploadSelectedBackground(field) {
     isTyping=false;demoFieldDirty=false;mode?renderImportedInspector():renderDemoInspector();
     setStatus('背景貼圖已內嵌，可調大小／位置／重複；HTML與JSON可回讀。原文字、前景圖片與業務未更改。');
   } catch(error){if(stillCurrent()){document.getElementById('bg-result').textContent=error.message;setStatus('貼圖未更改：'+error.message);}}
+  finally { if (pendingBackgroundRequest === request) pendingBackgroundRequest = null; }
 }
 function updateBackgroundField(event,commit) {
   const field=event.target;if(!field.id?.startsWith('bg-'))return false;
