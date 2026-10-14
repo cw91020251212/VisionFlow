@@ -139,6 +139,7 @@ function importCanvasData(value) {
   sourceGeneration++; importedMode = false; importedFrame = null;
   importedSelected = null; importedSelectedElements = []; importedLayers = [];
   importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = '';
+  importReport={warnings:[],externalResources:[]};
   appearanceRecords = {}; appearanceSource = {htmlFile: 'index.html', projectName: data.projectName || '', page: '/', sourceHash: null};
   appearanceNotes = data.userNotes || ''; appearanceState = 'default';
   pageSessions = {}; folderFiles = []; folderPagePaths = []; folderSetKey = ''; exportedAppearanceFingerprint = null;

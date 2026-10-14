@@ -80,3 +80,37 @@ function downloadDraftBackup(legacy = false) {
     setStatus('已下載草稿原始備份，未清除或覆寫本機草稿。此備份供復原排錯；日常交接請用畫布／外觀 JSON。');
   } catch (error) { sysAlert('草稿備份失敗：' + error.message); }
 }
+
+function validateImportReport(report) {
+  if (!report || !Array.isArray(report.warnings) || !Array.isArray(report.externalResources) || report.warnings.length>2000 || report.externalResources.length>2000)
+    throw new Error('資源報告格式無效。');
+  if (report.warnings.some(w=>typeof w!=='string' || w.length>10000) || report.externalResources.some(r=>!r || typeof r.url!=='string' || !/^https?:\/\//i.test(r.url) || r.url.length>10000 || typeof r.kind!=='string' || r.kind.length>100 || typeof r.reference!=='string' || r.reference.length>5000))
+    throw new Error('資源報告內容無效。');
+  return report;
+}
+function importReportText() {
+  return ['VisionFlow 本頁資源報告',`來源：${importedMode ? appearanceOrigin().entryPath : '空白畫布'}`,
+    '清單僅檢查已匯入的靜態檔案；匯入處理器未主動抓取遠端，但瀏覽器預覽可能請求這些網址。不包含 JS 動態請求或外部 CSS 的子依賴。',
+    ...importReport.warnings.map(w=>'警告：'+w),
+    ...importReport.externalResources.map(r=>`需要網路：${r.kind} | ${r.reference} | ${r.url}`),
+    !importReport.externalResources.length ? '未發現已掃描範圍的 HTTP 資源；不等於保證全離線。' : `共 ${importReport.externalResources.length} 項外部依賴。`].filter(Boolean).join('\n');
+}
+function renderImportReport() {
+  const section=document.getElementById('vf-resource-report'); if (!section) return;
+  section.hidden=!importedMode;
+  document.getElementById('vf-resource-summary').textContent=`${importReport.externalResources.length} 項網路依賴，${importReport.warnings.length} 項匯入提醒`;
+  document.getElementById('vf-resource-text').value=importReportText();
+}
+function createExportArtifact(kind) {
+  if (!['html','json'].includes(kind)) throw new Error('不支援的匯出格式。');
+  if (cancelEditorGesture || snapDragActive || guideDrag || isPanning || isErasing || isMarquee) throw new Error('請先完成或取消目前手勢，再匯出／分享。');
+  if (importedMode && !isIframeLoaded) throw new Error('請等待匯入畫布完成載入，再匯出／分享。');
+  const data=importedMode ? collectAppearanceData() : collectCanvasData();
+  return {kind,filename:`visionflow-${importedMode?'appearance':'canvas'}.${kind}`,
+    content:kind==='json'?JSON.stringify(data,null,2):importedMode?buildAppearanceHtml():buildCanvasHtml(),
+    sourceKey:importedMode?pageSessionKey():null,fingerprint:importedMode?JSON.stringify(data):null};
+}
+function markArtifactExported(artifact) {
+  if (importedMode && artifact.sourceKey===pageSessionKey() && artifact.fingerprint) exportedAppearanceFingerprint=artifact.fingerprint;
+  scheduleAppearanceSave();
+}

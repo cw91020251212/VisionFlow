@@ -240,6 +240,15 @@
     .context-menu button { background: transparent; border: none; padding: 8px 12px; text-align: left; font-size: 12px; cursor: pointer; border-radius: 4px; color: var(--text); font-weight: 500; display: flex; gap: 8px; align-items: center; }
     .context-menu button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
     .context-menu button:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.5; }
+    dialog { border:1px solid var(--line);border-radius:12px;max-width:520px;width:calc(100% - 32px);max-height:85vh;overflow:auto;padding:20px;color:var(--text);background:var(--panel);box-sizing:border-box;font-size:14px; }
+    dialog::backdrop { background:rgba(23,32,42,.45); }
+    dialog input,dialog select,dialog textarea { width:100%;box-sizing:border-box;font:inherit;margin:8px 0; }
+    .dialog-head,.dialog-actions { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+    .dialog-head h2 {font-size:18px;margin:0 0 12px;}
+    [hidden] {display:none!important;}
+    .small-screen-hint {display:none;}
+    #vf-resource-text {font-size:12px;white-space:pre;}
+    @media(max-width:700px){.small-screen-hint{display:inline;} .footer{font-size:10px;gap:4px;flex-wrap:wrap;padding:4px;} #vf-offline-state{max-width:50vw;} }
   </style>
 </head>
 <body>
@@ -293,6 +302,7 @@
         <button class="button" id="reset">清空畫布</button>
         <button class="button primary" id="export">匯出外觀 HTML</button>
         <button class="button" id="export-json">匯出 JSON</button>
+        <button class="button" id="vf-share" aria-haspopup="dialog">分享</button>
       </div>
     </header>
     
@@ -310,6 +320,12 @@
             <label class="checkbox-field" style="margin-top:8px"><input type="checkbox" id="vf-trusted-scripts">允許可信頁面的脚本預覽</label>
             <p class="hint">只對自己的可信程式啟用；脚本可能存取網路及編輯器，不能當安全沙箱。外觀匯出不含可執行業務脚本，執行狀態不能保證保存。</p>
           </div>
+          <section id="vf-resource-report" hidden style="margin-top:12px">
+            <h3 class="panel-title">本頁資源報告</h3><p id="vf-resource-summary" class="hint"></p>
+            <p class="hint">未主動抓取遠端。清單以已匯入靜態內容為限；有依賴就需要網路。</p>
+            <details><summary>查看完整警告與依賴</summary><textarea id="vf-resource-text" readonly rows="8" aria-label="完整資源報告" style="width:100%"></textarea></details>
+            <button class="button" id="vf-copy-resources">複製完整報告</button>
+          </section>
           <div class="form-grid" style="margin-top:8px">
             <div class="field full"><label>原始專案名稱</label><input id="vf-project-name" placeholder="選填"></div>
             <div class="field full"><label>原始頁面路徑</label><input id="vf-page-path" value="/"></div>
@@ -354,9 +370,21 @@
         <div id="inspector-content" class="empty" style="margin-top: 24px;">請喺畫布點選物件以編輯屬性。</div>
       </aside>
     </main>
-    <footer class="footer"><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原 / <kbd>Ctrl</kbd> + <kbd>G</kbd> 群組</span></footer>
+    <footer class="footer"><span id="vf-offline-state" role="status">離線快取檢查中</span><button class="button" id="vf-update-app" hidden>保存並更新</button><span class="small-screen-hint">工具列可左右滑動；建議使用電腦編輯。</span><span>支援 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 復原 / <kbd>Ctrl</kbd> + <kbd>G</kbd> 群組</span></footer>
   </div>
   
+  <dialog id="vf-share-dialog" aria-labelledby="vf-share-title">
+    <form method="dialog" class="dialog-head"><h2 id="vf-share-title">分享目前設計</h2><button class="button" aria-label="關閉分享">關閉</button></form>
+    <label for="vf-share-format">檔案格式</label><select id="vf-share-format"><option value="html">HTML · 可看外觀並重新匯入</option><option value="json">JSON · 交給 AI／開發者</option></select>
+    <p id="vf-share-preview"></p><p id="vf-share-result" role="status"></p>
+    <div class="dialog-actions"><button class="button primary" id="vf-share-send">系統分享檔案</button><button class="button" id="vf-share-download">下載檔案</button></div>
+    <hr><button class="button" id="vf-share-copy-link">複製編輯器網址（不含設計）</button><input id="vf-editor-link" hidden readonly aria-label="編輯器網址">
+  </dialog>
+  <dialog id="vf-inbox-dialog" aria-labelledby="vf-inbox-title">
+    <form method="dialog" class="dialog-head"><h2 id="vf-inbox-title">收到分享文字／網址</h2><button class="button" aria-label="關閉收件">關閉</button></form>
+    <textarea id="vf-inbox-text" readonly rows="8" aria-label="收到的分享文字"></textarea><p id="vf-inbox-result" role="status"></p>
+    <div class="dialog-actions"><button class="button primary" id="vf-inbox-add">加入本頁交接說明</button><button class="button" id="vf-inbox-copy">複製文字</button></div>
+  </dialog>
   <div id="selection-marquee" class="selection-marquee"></div>
 
   <!-- 抽離到根目錄的下拉選單，保證不被遮擋 -->
@@ -1986,7 +2014,7 @@
       cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
       importedFrame = null; importedSelected = null; importedSelectedElements = []; importedLayers = []; sourceGeneration++;
-      appearanceRecords = {}; importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = ''; appearanceNotes = '';
+      importReport={warnings:[],externalResources:[]}; appearanceRecords = {}; importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = ''; appearanceNotes = '';
       pageSessions = {}; folderFiles = []; folderPagePaths = []; folderSetKey = ''; exportedAppearanceFingerprint = null;
       pendingGroups = []; pendingSelection = []; pendingGuideTargets = []; importedGroupIds = new WeakMap();
       syncAppearanceControls();
@@ -2068,10 +2096,11 @@
   <script src="canvas.js"></script>
   <script src="project-io.js"></script>
   <script src="appearance.js"></script>
+  <script src="delivery.js"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
-    initializeAppearanceEditor();
+    initializeAppearanceEditor(); initializeDelivery();
   </script>
 </body>
 </html>
