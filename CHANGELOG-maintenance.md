@@ -26,7 +26,7 @@ HTTP快取不由JS全域刪除。HTML版本meta、全部JS的`?v=`網址和SW版
 
 ## 驗證與發布
 
-完整全套 Chromium 回歸164項通過，0失敗、0跳過、0flaky；含新增非同步匯入／貼圖懸置測試（清快取與更新都拒絕取消輸入、其完成後可繼續）、更新被多分頁阻擋後可重試、離線清理拒絕、確認後丟棄貼圖、鍵盤快捷鍵隔離及原先四批和貼圖功能。`npm run check`、`git diff --check`均通過。只讀審查發現的非同步輸入風險已修正並有回歸覆蓋。提交`a91bf251ae494da61bc1ed509a93a017bcc7a34a`已推送，PR #6（base `main`）已建立：[PR #6](https://github.com/cw91020251212/VisionFlow/pull/6)。分支預覽HTTP 200：[打開維護功能預覽](https://8771-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)。正式網址仍是舊版，尚未合併／部署；正式`main`未變，待使用者明確確認後才合併並更新公開網站。
+完整全套 Chromium 回歸164項通過，0失敗、0跳過、0flaky；含新增非同步匯入／貼圖懸置測試（清快取與更新都拒絕取消輸入、其完成後可繼續）、更新被多分頁阻擋後可重試、離線清理拒絕、確認後丟棄貼圖、鍵盤快捷鍵隔離及原先四批和貼圖功能。`npm run check`、`git diff --check`均通過。只讀審查發現的非同步輸入風險已修正並有回歸覆蓋。PR #6已合併，部署commit為`16ad895ae1b7e1c563085dbbd20842f365f0cd51`；[Pages部署run 38565729314](https://github.com/cw91020251212/VisionFlow/actions/runs/38565729314)成功。正式網址已返回版本`maintenance-controls-v2`，HTML、維護／分享腳本與Service Worker均已核對HTTP 200及版本一致。正式網站：[VisionFlow](https://cw91020251212.github.io/VisionFlow/)。
 
 尚未完成Safari／Firefox／真實手機全面人工驗收。不支援SW的环境不能由worker檢查其他分頁，仍需使用者先關閉；file://沒有程式快取／線上更新，但可明確還原本機草稿。出廠還原刪除的設計無法靠Ctrl+Z取回，重要設計務必另外下载HTML／JSON。
 
