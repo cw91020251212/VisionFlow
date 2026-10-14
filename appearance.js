@@ -30,6 +30,19 @@ const PRESERVE = ['text', 'links', 'image-source', 'click-handler', 'form-behavi
 const VALID_STATES = ['default', 'hover', 'focus', 'disabled', 'loading'];
 const STYLE_ALLOWLIST = new Set(['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'border-radius', 'border-width', 'border-style', 'border-color', 'box-shadow', 'font-size', 'font-family', 'color', 'text-shadow', 'width', 'height', 'box-sizing', 'translate']);
 
+// Some mobile browsers and embedded WebViews expose FileReader but not File.text().
+// Keep the import path working on both implementations.
+function readFileText(file) {
+  if (file && typeof file.text === 'function') return file.text();
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') { reject(new Error('此瀏覽器不支援讀取本機檔案。')); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('本機檔案讀取失敗。'));
+    reader.readAsText(file);
+  });
+}
+
 function splitCssList(value) {
   const parts=[]; let depth=0, start=0;
   for(let i=0;i<value.length;i++) {
@@ -559,7 +572,7 @@ async function loadSelectedFiles(files, entryPath, switchingPage = false) {
     const json=files.find(f=>/\.json$/i.test(f.name) && !f.webkitRelativePath);
     if (json && !files.some(f=>/\.html?$/i.test(f.name))) {
       if (json.size > 25000000) throw new Error('專案 JSON 超過 25 MB。');
-      const raw = JSON.parse(await json.text());
+      const raw = JSON.parse(await readFileText(json));
       if (request !== importRequestSequence) return;
       if (raw?.format === CANVAS_FORMAT) { importCanvasData(raw); return; }
       const data=validateAppearanceData(raw);
@@ -576,7 +589,7 @@ async function loadSelectedFiles(files, entryPath, switchingPage = false) {
     const preparedReport=validateImportReport({warnings:prepared.warnings.filter(w=>!w.startsWith('Disabled ')),externalResources:prepared.externalResources});
     const entryFile=files.find(f=>(f.webkitRelativePath||f.name)===prepared.entryPath || (f.webkitRelativePath||f.name).endsWith('/'+prepared.entryPath));
     if (!entryFile) throw new Error('找不到所選入口的原始檔案。');
-    const original=await entryFile.text(), doc=new DOMParser().parseFromString(prepared.html,'text/html');
+    const original=await readFileText(entryFile), doc=new DOMParser().parseFromString(prepared.html,'text/html');
     if (request !== importRequestSequence) return;
     const canvasMetadata = doc.getElementById('visionflow-canvas-data');
     if (canvasMetadata) { importCanvasData(JSON.parse(canvasMetadata.textContent)); return; }
