@@ -3,6 +3,7 @@
 let editorRegistration = null;
 let updateRequested = false;
 let sharingBusy = false;
+let offlineInitialization = Promise.resolve();
 
 async function copyEditorText(text, fallback) {
   try {
@@ -87,6 +88,10 @@ function addReceivedNotes() {
 function updateAvailability() {
   const button=document.getElementById('vf-update-app');
   button.hidden=!editorRegistration?.waiting;
+  button.disabled=maintenanceBusy || updateRequested;
+  const apply=document.getElementById('vf-maintenance-apply');
+  apply.hidden=!editorRegistration?.waiting;
+  apply.disabled=maintenanceBusy || updateRequested;
   if(editorRegistration?.waiting)document.getElementById('vf-offline-state').textContent='有新版待更新（先保存草稿）';
 }
 function offlineState(message) { document.getElementById('vf-offline-state').textContent=message; }
@@ -104,11 +109,12 @@ async function initializeOfflineEditor() {
     updateAvailability();
     navigator.serviceWorker.ready.then(()=>{if(!editorRegistration.waiting)offlineState(navigator.onLine?'應用離線快取就緒；外部資源仍需網路':'離線模式；外部資源可能不可用');});
     navigator.serviceWorker.addEventListener('message',event=>{
-      if(event.data?.type==='VF_UPDATE_BLOCKED') {updateRequested=false;document.getElementById('vf-update-app').disabled=false;setStatus(event.data.message);}
+      if(event.data?.type==='VF_UPDATE_BLOCKED') {updateRequested=false;updateAvailability();setStatus(event.data.message);}
     });
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(!updateRequested)return;
       updateRequested=false;
+      if(hasPendingEditorInput()) {setStatus('新版已啟用，但匯入／貼圖仍在處理，未刷新；請完成後再安全重新載入。');return;}
       if(performQuickSave(true))location.reload();
       else setStatus('新版已啟用，但草稿保存失敗，未刷新目前設計；請先下載備份。');
     });
@@ -117,9 +123,12 @@ async function initializeOfflineEditor() {
   } catch(error) { offlineState('離線快取未建立：'+error.message+'；編輯／下載仍可用'); }
 }
 function requestEditorUpdate() {
+  if(maintenanceBusy)return;
   if(!editorRegistration?.waiting || updateRequested)return;
+  if(hasPendingEditorInput()) {setStatus('匯入／貼圖尚未完成，未更新或取消它；請等待完成或明確取消後重試。');return;}
   if(!performQuickSave()) {setStatus('尚未安全保存草稿，未更新或刷新；請完成手勢或先下载備份。');return;}
   updateRequested=true;document.getElementById('vf-update-app').disabled=true;
+  updateAvailability();
   setStatus('草稿已保存，正在請求新版；若有其他分頁請先關閉。');
   editorRegistration.waiting.postMessage({type:'VF_ACTIVATE_UPDATE'});
 }
@@ -142,5 +151,5 @@ function initializeDelivery() {
   });
   document.getElementById('vf-inbox-add').addEventListener('click',addReceivedNotes);
   document.getElementById('vf-update-app').addEventListener('click',requestEditorUpdate);
-  handleLaunchRequest();initializeOfflineEditor();
+  initializeMaintenance();handleLaunchRequest();offlineInitialization=initializeOfflineEditor();
 }

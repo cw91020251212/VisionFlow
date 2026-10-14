@@ -24,6 +24,7 @@ let exportedAppearanceFingerprint = null;
 let initialAppearanceFingerprint = null;
 let draftRecoveryBlocked = false;
 let importRequestSequence = 0;
+let pendingImportRequest = null;
 const DRAFT_KEY = 'visionflow-appearance-draft-v1';
 const PRESERVE = ['text', 'links', 'image-source', 'click-handler', 'form-behavior', 'data-logic', 'program-state'];
 const VALID_STATES = ['default', 'hover', 'focus', 'disabled', 'loading'];
@@ -504,11 +505,13 @@ function watchImportedLayers() {
 }
 function scheduleAppearanceSave() {
   clearTimeout(appearanceAutosaveTimer);
+  if (maintenanceStoragePaused) return;
   if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) return;
   appearanceAutosaveTimer=setTimeout(()=>performQuickSave(true),350);
 }
 function performQuickSave(silent = false) {
   try {
+    if (maintenanceStoragePaused) return false;
     if (draftRecoveryBlocked) { setStatus('原草稿無法恢復，已停止自動覆寫；請先下載草稿備份。'); return false; }
     if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) { if (!silent) setStatus('手勢進行中，請完成拖動後再暫存；尚未覆寫草稿。'); return false; }
     const previous=localStorage.getItem(DRAFT_KEY);
@@ -544,8 +547,10 @@ function previewSource(html) {
   return '<!doctype html>\n'+doc.documentElement.outerHTML;
 }
 async function loadSelectedFiles(files, entryPath, switchingPage = false) {
+  if (updateRequested || maintenanceStoragePaused) { setStatus('更新／維護正在套用，未匯入新檔；請完成後重新選擇。'); return; }
   cancelBackgroundUpload();
   const request = ++importRequestSequence;
+  pendingImportRequest = request;
   try {
     if (draftRecoveryBlocked) throw new Error('原草稿仍受保護，請先下載草稿備份並在另一瀏覽器工作區開啟新專案。');
     if (switchingPage && hasUnexportedAppearanceChanges()) {
@@ -614,6 +619,7 @@ async function loadSelectedFiles(files, entryPath, switchingPage = false) {
     const warnings=prepared.warnings.filter(w=>!w.startsWith('Disabled '));
     if (warnings.length) sysAlert('匯入限制／缺少資源：\n'+warnings.join('\n'));
   } catch(e) { if (request !== importRequestSequence) return; refreshEntryPagesControl(); sysAlert('匯入失敗：'+e.message); setStatus('匯入失敗，原畫布未被替換。'); }
+  finally { if (pendingImportRequest === request) pendingImportRequest = null; }
 }
 function initializeAppearanceEditor() {
   document.getElementById('export-json').addEventListener('click',()=>downloadAppearance('json'));
