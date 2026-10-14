@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-HK">
 <head>
-  <meta name="visionflow-app-version" content="toolbar-scroll-v2">
+  <meta name="visionflow-app-version" content="guides-visible-v1">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionFlow | 專業網頁視覺設計</title>
@@ -188,10 +188,10 @@
     .measure-line::before { left: 0; } .measure-line::after { right: 0; }
     .measure-label { position: absolute; background: #e6405c; color: #fff; padding: 4px 8px; border-radius: 6px; font-family: Inter, sans-serif; font-size: 13px; font-weight: 800; transform-origin: center; white-space: nowrap; box-shadow: 0 4px 10px rgba(230, 64, 92, 0.3); pointer-events: none; left: 50%; top: -24px; text-align: center; line-height: 1.3; border: 1px solid #fff; }
 
-    .guide-layer { position: absolute; inset: 0 !important; z-index: 20; pointer-events: none; overflow: visible !important; width: 100% !important; height: 100% !important; }
+    .guide-layer { position: absolute; inset: 0 !important; z-index: 200; pointer-events: none; overflow: visible !important; width: 100% !important; height: 100% !important; }
     .guide-line { position: absolute; background: transparent; pointer-events: none; }
-    .guide-line.vertical { top: -10000px !important; bottom: -10000px !important; height: auto !important; width: 1px; transform: none; border-left: 1px dashed rgba(230, 64, 92, .78); }
-    .guide-line.horizontal { left: -10000px !important; right: -10000px !important; width: auto !important; height: 1px; transform: none; border-top: 1px dashed rgba(230, 64, 92, .78); }
+    .guide-line.vertical { top: 0 !important; bottom: auto !important; height: 100% !important; width: 1px; transform: none; border-left: 1px dashed rgba(230, 64, 92, .9); }
+    .guide-line.horizontal { left: 0 !important; right: auto !important; width: 100% !important; height: 1px; transform: none; border-top: 1px dashed rgba(230, 64, 92, .9); }
     .guide-line.manual-guide { pointer-events: auto; background: transparent; }
     .guide-line.manual-guide.vertical { top: -10000px !important; bottom: -10000px !important; height: auto !important; width: 1px; border-left: 1px dashed rgba(230, 64, 92, .72); cursor: ew-resize; }
     .guide-line.manual-guide.horizontal { left: -10000px !important; right: -10000px !important; width: auto !important; height: 1px; border-top: 1px dashed rgba(230, 64, 92, .72); cursor: ns-resize; }
@@ -1265,7 +1265,7 @@
           const key = `${item.id}:${edge}`; if (hiddenDemoGuideKeys.includes(key)) continue;
           const line = document.createElement('div');
           line.className = `guide-line ${kind} selected-guide generated-guide${selectedManualGuide?.generated && selectedManualGuide.key === key ? ' selected-guide-line' : ''}`;
-          Object.assign(line.style, kind === 'vertical' ? { left:`${position}px`, width:'1px', transform:'none', pointerEvents:'auto', zIndex:'31' } : { top:`${position}px`, height:'1px', transform:'none', pointerEvents:'auto', zIndex:'31' });
+          Object.assign(line.style, kind === 'vertical' ? { left:`${position}px`, width:'1px', transform:'none', pointerEvents:'auto', zIndex:'201' } : { top:`${position}px`, height:'1px', transform:'none', pointerEvents:'auto', zIndex:'201' });
           
           line.addEventListener('pointerdown', event => {
             if (event.button !== 0) return; event.preventDefault(); event.stopPropagation();
@@ -1284,7 +1284,7 @@
         line.classList.toggle('selected-manual-guide', selectedManualGuide?.scope === 'demo' && selectedManualGuide.index === index);
         line.style[guide.kind === 'vertical' ? 'left' : 'top'] = `${guide.position}px`;
         line.style.pointerEvents = 'auto'; line.style.cursor = eraserMode ? 'crosshair' : (guide.kind === 'vertical' ? 'ew-resize' : 'ns-resize');
-        line.style.zIndex = '30';
+        line.style.zIndex = '200';
         
         line.addEventListener('pointerdown', event => {
           if (event.button !== 0) return; event.preventDefault(); event.stopPropagation();
@@ -2165,16 +2165,16 @@
 
 
   </script>
-  <script src="folder-import.js?v=toolbar-scroll-v2"></script>
-  <script src="workspace-state.js?v=toolbar-scroll-v2"></script>
-  <script src="pointer-tools.js?v=toolbar-scroll-v2"></script>
-  <script src="background-image.js?v=toolbar-scroll-v2"></script>
-  <script src="canvas.js?v=toolbar-scroll-v2"></script>
-  <script src="project-io.js?v=toolbar-scroll-v2"></script>
-  <script src="appearance.js?v=toolbar-scroll-v2"></script>
-  <script src="maintenance.js?v=toolbar-scroll-v2"></script>
-  <script src="delivery.js?v=toolbar-scroll-v2"></script>
-  <script src="toolbar-scroll.js?v=toolbar-scroll-v2"></script>
+  <script src="folder-import.js?v=guides-visible-v1"></script>
+  <script src="workspace-state.js?v=guides-visible-v1"></script>
+  <script src="pointer-tools.js?v=guides-visible-v1"></script>
+  <script src="background-image.js?v=guides-visible-v1"></script>
+  <script src="canvas.js?v=guides-visible-v1"></script>
+  <script src="project-io.js?v=guides-visible-v1"></script>
+  <script src="appearance.js?v=guides-visible-v1"></script>
+  <script src="maintenance.js?v=guides-visible-v1"></script>
+  <script src="delivery.js?v=guides-visible-v1"></script>
+  <script src="toolbar-scroll.js?v=guides-visible-v1"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
