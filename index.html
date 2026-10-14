@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-HK">
 <head>
-  <meta name="visionflow-app-version" content="toolbar-scroll-v1">
+  <meta name="visionflow-app-version" content="toolbar-scroll-v2">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionFlow | 專業網頁視覺設計</title>
@@ -304,8 +304,8 @@
       </div>
       
       <div class="toolbar-group">
-        <button class="button" id="undo">↶ 復原</button>
-        <button class="button" id="redo">↷ 重做</button>
+        <button class="button" id="undo" aria-label="復原上一步修改" title="復原上一步修改 (Ctrl/⌘+Z)">↶ 復原</button>
+        <button class="button" id="redo" aria-label="重做下一步修改" title="重做下一步修改 (Ctrl/⌘+Shift+Z 或 Ctrl/⌘+Y)">↷ 重做</button>
         <button class="button" id="quick-save" style="font-weight:bold; color:#0fa958; border-color:#0fa958; background:#eafcf1;" title="即時儲存目前所有修改，防止切換頁面時遺失">💾 暫存</button>
         <button class="button" id="vf-backup-draft" title="下載本機草稿原始備份，不清除或覆寫資料">備份草稿</button>
         <button class="button" id="reset">清空畫布</button>
@@ -2012,10 +2012,51 @@
         }
     });
 
-    function updateHistoryButtons() { document.querySelector('#undo').disabled = history.length === 0; document.querySelector('#redo').disabled = future.length === 0; }
-    function savePoint() { history.push(snapshot()); if (history.length > 40) history.shift(); future = []; updateHistoryButtons(); }
-    function undo() { if (!history.length) return; future.push(snapshot()); restoreSnapshot(history.pop()); updateHistoryButtons(); }
-    function redo() { if (!future.length) return; history.push(snapshot()); restoreSnapshot(future.pop()); updateHistoryButtons(); }
+    function updateHistoryButtons() {
+      const undoButton = document.querySelector('#undo');
+      const redoButton = document.querySelector('#redo');
+      undoButton.disabled = history.length === 0;
+      redoButton.disabled = future.length === 0;
+      undoButton.setAttribute('aria-disabled', String(undoButton.disabled));
+      redoButton.setAttribute('aria-disabled', String(redoButton.disabled));
+    }
+    function savePoint() {
+      history.push(snapshot());
+      if (history.length > 40) history.shift();
+      future = [];
+      updateHistoryButtons();
+    }
+    function undo() {
+      if (!history.length) return false;
+      try {
+        future.push(snapshot());
+        restoreSnapshot(history.pop());
+        updateHistoryButtons();
+        return true;
+      } catch (error) {
+        // Keep the failed point available instead of silently doing nothing.
+        const failedState = future.pop();
+        if (failedState) history.push(failedState);
+        updateHistoryButtons();
+        setStatus('復原失敗：目前修改仍然保留。請先匯出外觀 JSON 備份後再重試。');
+        return false;
+      }
+    }
+    function redo() {
+      if (!future.length) return false;
+      try {
+        history.push(snapshot());
+        restoreSnapshot(future.pop());
+        updateHistoryButtons();
+        return true;
+      } catch (error) {
+        const failedState = history.pop();
+        if (failedState) future.push(failedState);
+        updateHistoryButtons();
+        setStatus('重做失敗：目前修改仍然保留。請先匯出外觀 JSON 備份後再重試。');
+        return false;
+      }
+    }
     
     document.querySelector('#export').addEventListener('click', () => downloadAppearance('html'));
     document.querySelector('#quick-save').addEventListener('click', () => performQuickSave());
@@ -2101,8 +2142,19 @@
       const tag = (e.target.tagName || '').toUpperCase();
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
       const k = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && k === 'g') { e.preventDefault(); toggleGroup(); return; }
-      if (e.ctrlKey || e.metaKey) return;
+      const modifier = e.ctrlKey || e.metaKey;
+      if (modifier && k === 'g') { e.preventDefault(); toggleGroup(); return; }
+      if (modifier && k === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
+      if (modifier && k === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (modifier) return;
       if (k === 's') { e.preventDefault(); document.querySelector('#snap-toggle').click(); }
       else if (k === 'i') { e.preventDefault(); document.querySelector('#snap-hover').click(); }
       else if (k === 'g') { e.preventDefault(); document.querySelector('#snap-grid-toggle').click(); }
@@ -2113,16 +2165,16 @@
 
 
   </script>
-  <script src="folder-import.js?v=toolbar-scroll-v1"></script>
-  <script src="workspace-state.js?v=toolbar-scroll-v1"></script>
-  <script src="pointer-tools.js?v=toolbar-scroll-v1"></script>
-  <script src="background-image.js?v=toolbar-scroll-v1"></script>
-  <script src="canvas.js?v=toolbar-scroll-v1"></script>
-  <script src="project-io.js?v=toolbar-scroll-v1"></script>
-  <script src="appearance.js?v=toolbar-scroll-v1"></script>
-  <script src="maintenance.js?v=toolbar-scroll-v1"></script>
-  <script src="delivery.js?v=toolbar-scroll-v1"></script>
-  <script src="toolbar-scroll.js?v=toolbar-scroll-v1"></script>
+  <script src="folder-import.js?v=toolbar-scroll-v2"></script>
+  <script src="workspace-state.js?v=toolbar-scroll-v2"></script>
+  <script src="pointer-tools.js?v=toolbar-scroll-v2"></script>
+  <script src="background-image.js?v=toolbar-scroll-v2"></script>
+  <script src="canvas.js?v=toolbar-scroll-v2"></script>
+  <script src="project-io.js?v=toolbar-scroll-v2"></script>
+  <script src="appearance.js?v=toolbar-scroll-v2"></script>
+  <script src="maintenance.js?v=toolbar-scroll-v2"></script>
+  <script src="delivery.js?v=toolbar-scroll-v2"></script>
+  <script src="toolbar-scroll.js?v=toolbar-scroll-v2"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
