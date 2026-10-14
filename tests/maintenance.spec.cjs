@@ -12,8 +12,8 @@ async function awaitReload(page){await page.waitForURL(url=>url.searchParams.has
 
 test('versioned scripts and worker match; maintenance entry and backup are usable without deleting data',async({page})=>{
  await page.goto('/');await seed(page);const original=await page.evaluate(()=>localStorage.getItem(DRAFT_KEY));await open(page);
- await expect(page.locator('#vf-maintenance-version')).toHaveText('maintenance-controls-v2');
  const version=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8').match(/const APP_VERSION = '([^']+)'/)[1];
+ await expect(page.locator('#vf-maintenance-version')).toHaveText(version);
  const scripts=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(n=>new URL(n.src).searchParams.get('v')));expect(scripts.every(value=>value===version)).toBe(true);
  const download=page.waitForEvent('download');await page.click('#vf-maintenance-backup');expect(fs.readFileSync(await(await download).path(),'utf8')).toBe(original);
  expect(await page.evaluate(()=>localStorage.getItem(DRAFT_KEY))).toBe(original);

@@ -1,9 +1,9 @@
 // Only the editor shell is cached; imported files and user designs are never stored here.
-const APP_VERSION = 'maintenance-controls-v2';
+const APP_VERSION = 'toolbar-scroll-v1';
 const SCOPE = self.registration.scope;
 const CACHE_PREFIX = 'visionflow-app:' + encodeURIComponent(SCOPE) + ':';
 const CACHE_NAME = CACHE_PREFIX + APP_VERSION;
-const APP_FILES = ['index.html', 'appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'pointer-tools.js', 'delivery.js', 'background-image.js', 'maintenance.js', 'icon.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'manifest.json'];
+const APP_FILES = ['index.html', 'appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'pointer-tools.js', 'delivery.js', 'background-image.js', 'maintenance.js', 'toolbar-scroll.js', 'icon.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'manifest.json'];
 const APP_URLS = APP_FILES.map(path => new URL(path, SCOPE).href);
 
 self.addEventListener('install', event => {

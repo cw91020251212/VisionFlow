@@ -76,7 +76,7 @@ const {fixtureServer,offlineReady}=require('./helpers/sw-fixture.cjs');
 test('complete scoped cache works offline, retains draft, and never stores imported HTML or outside origin paths',async({page,context})=>{
  const server=await fixtureServer();try{
   await offlineReady(page,server.url);await page.evaluate(()=>{addShape('rect');performQuickSave();});
-  const keys=await page.evaluate(async()=>{const names=await caches.keys();const cache=await caches.open(names.find(n=>n.includes('visionflow-app:')));return(await cache.keys()).map(r=>r.url);});expect(keys).toHaveLength(15);expect(keys.every(k=>k.startsWith(server.url))).toBe(true);expect(keys.some(k=>k.includes('delivery.js'))).toBe(true);expect(keys.some(k=>k.includes('draft'))).toBe(false);
+  const keys=await page.evaluate(async()=>{const names=await caches.keys();const cache=await caches.open(names.find(n=>n.includes('visionflow-app:')));return(await cache.keys()).map(r=>r.url);});const appFiles=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const APP_FILES = \[([\s\S]*?)\];/)[1];expect(keys).toHaveLength([...appFiles.matchAll(/'[^']+'/g)].length);expect(keys.every(k=>k.startsWith(server.url))).toBe(true);expect(keys.some(k=>k.includes('delivery.js'))).toBe(true);expect(keys.some(k=>k.includes('draft'))).toBe(false);
   await context.setOffline(true);await page.reload();await page.waitForFunction(()=>items.length===1);expect(await page.evaluate(()=>fixtureShellVersion)).toBe('v1');await expect(page.locator('#vf-offline-state')).toContainText('離線');
  }finally{await context.setOffline(false);await page.goto('about:blank');await server.close();}
 });

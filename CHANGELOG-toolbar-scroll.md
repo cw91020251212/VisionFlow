@@ -1,0 +1,18 @@
+# 工具栏横向操作改进（2026-10-14）
+
+## 改动
+
+- 顶部工具栏内容溢出时，在工具栏正下方显示专用可见滑块；拖动滑块可水平滚动工具栏，点击轨道可快速定位；顶部滚动位置也会反向同步至滑块。
+- 顶部工具栏空白处使用抓取手形光标；按住鼠标左键左右拖动可滚动。按钮、链接、输入控件不触发拖动，仍可正常点击。
+- 自定义滚动条支持方向键、Shift+方向键、PageUp、PageDown、Home、End；无溢出时隐藏滑块。小屏触控横向滑动保留。
+- 同步更新Service Worker缓存资源清单与应用版本 `toolbar-scroll-v1`，并让缓存回归按现行资源清单动态计数。
+
+## 验证
+
+- `npm run check`：通过。
+- `tests/toolbar-scroll.spec.cjs`：3项窄屏桌面、宽屏及窄屏布局回归通过。
+- 完整 Chromium 回归：**167项通过，0失败、0跳过、0 flaky**；包括既有维护、缓存、贴图、导入／导出功能。
+- `git diff --check`：通过。
+- 隔离预览返回HTTP 200：[查看工具栏改进预览](https://8772-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)。
+
+修复分支 `feat/toolbar-scrollbar-drag` 已推送，PR [#7](https://github.com/cw91020251212/VisionFlow/pull/7) 已建立，供确认后合并；正式 `main` 与 GitHub Pages 保持不变。

@@ -10,7 +10,7 @@ async function fixtureServer() {
   const url=new URL(req.url,'http://localhost'), name=url.pathname.split('/').at(-1)||'index.html';
   if(url.pathname==='/other/sw.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end('self.addEventListener("install",event=>event.waitUntil(self.skipWaiting()));');return;}
   if(state.networkFailure && name==='sw.js' && url.searchParams.has('maintenance-check')){res.writeHead(503);res.end('offline');return;}
-  if(!url.pathname.startsWith('/project/') || !['index.html','sw.js','appearance.js','folder-import.js','canvas.js','project-io.js','workspace-state.js','pointer-tools.js','delivery.js','background-image.js','maintenance.js','manifest.json','icon.png','icon-192.png','icon-512.png','apple-touch-icon.png'].includes(name)){res.writeHead(404);res.end();return;}
+  if(!url.pathname.startsWith('/project/') || !['index.html','sw.js','appearance.js','folder-import.js','canvas.js','project-io.js','workspace-state.js','pointer-tools.js','delivery.js','background-image.js','maintenance.js','toolbar-scroll.js','manifest.json','icon.png','icon-192.png','icon-512.png','apple-touch-icon.png'].includes(name)){res.writeHead(404);res.end();return;}
   if(state.missing && name==='delivery.js'){res.writeHead(404);res.end();return;}
   let body=fs.readFileSync(path.join(root,name));
   if(name==='sw.js')body=Buffer.from(body.toString().replace(/const APP_VERSION = '[^']+';/,`const APP_VERSION = ${JSON.stringify(state.version)};`));
