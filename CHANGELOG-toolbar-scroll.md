@@ -11,8 +11,11 @@
 
 - `npm run check`：通过。
 - `tests/toolbar-scroll.spec.cjs`：3项窄屏桌面、宽屏及窄屏布局回归通过。
-- 完整 Chromium 回归：**167项通过，0失败、0跳过、0 flaky**；包括既有维护、缓存、贴图、导入／导出功能。
+- 完整 Chromium 回归：**167项通过，0失败、0跳过、0 flaky**；包含既有维护、缓存、贴图、导入／导出功能。
 - `git diff --check`：通过。
-- 隔离预览返回HTTP 200：[查看工具栏改进预览](https://8772-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)。
 
-修复分支 `feat/toolbar-scrollbar-drag` 已推送，PR [#7](https://github.com/cw91020251212/VisionFlow/pull/7) 已建立，供确认后合并；正式 `main` 与 GitHub Pages 保持不变。
+## 正式发布
+
+- PR [#7](https://github.com/cw91020251212/VisionFlow/pull/7) 已按使用者确认合并到公开仓库 `main`；GitHub Pages workflow run `38570689709` 成功，main 提交为 `0dd8532ac29dfdc442cb2f1171616ac1ec491316`。
+- 正式网站：[VisionFlow](https://cw91020251212.github.io/VisionFlow/)。使用不带旧 Service Worker 的全新 Chromium 上下文实测：横条可拖动并带动工具栏（滚动位置增加87 px）、空白处抓取可滚动45 px、工具栏按钮正常触发点击事件，控制台无页面错误。
+- 临时隔离预览仍可访问：[工具栏改进预览](https://8772-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)。
