@@ -48,3 +48,10 @@ https://8768-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer
 导入自己信任的HTML或测试副本，先下载草稿／外观备份；不同预览来源与正式站点的localStorage独立，不会自动迁移正式浏览器设计。主要使用方式以电脑鼠标键盘为准。
 
 离线／分享完整流程、复杂SPA、跨源iframe、Shadow DOM、Safari／Firefox及真实手机仍未完成整套验收；不能将这一批通过测试解释成软件全部功能已无问题。下一批可针对导入资源、离线更新和实际分享链路继续修复。
+
+## 已保存的 GitHub 交付
+
+- 第三批 PR：[VisionFlow #3](https://github.com/cw91020251212/VisionFlow/pull/3)，base 为第二批修复分支，不是 main。
+- 通过完整回归的代码提交：`4212ef1`。随后只追加本交付信息，不改变应用程序。
+- 修复源码：[第三批分支](https://github.com/cw91020251212/VisionFlow/tree/fix/phase3-pointer-geometry)。
+- 正式 GitHub Pages 尚未替换；请先用上方第三批独立临时预览。合并需按第一批 → 第二批 → 第三批依赖顺序处理。
