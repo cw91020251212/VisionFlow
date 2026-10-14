@@ -49,3 +49,9 @@
 基線第四批 `6351f26affc283ca65ea1a91af66fcc1f865a027`；新分支 `feat/background-textures`，以第四批為PR base，包含四批修復。保留四批獨立預覽及正式 main；本增補不合併或替換正式 GitHub Pages。
 
 [背景貼圖獨立臨時預覽](https://8770-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)，不是正式Pages。與原四批預覽草稿不共用，請先匯出舊設計再於此處匯入。
+
+## 已保存的交付位置
+
+[GitHub PR #5：背景貼圖增補](https://github.com/cw91020251212/VisionFlow/pull/5)，base為第四批 `fix/phase4-delivery-resources`。程式提交 `cd0c72c`，包含四批修復及本次背景貼圖，未合併main。
+
+已核驗本機及公開預覽的全部16個靜態檔案位元內容一致、HTTP 200；路由為 `/`；`.git/config`、`.env`及測試檔案返回404。原第四批預覽不存在新模組，證實沒有替換舊預覽。正式main仍為 `44e60b6c65a7b096105384518b24b072106eab5c`。最後保存的文件紀錄不改動已通過140項回歸的應用程式。
