@@ -2,7 +2,7 @@
 
 VisionFlow 是**純前端外觀參考編輯器**。你可以匯入 HTML、調整界面外觀，再匯出給 AI／開發者整合的外觀檔案。它不會自動修改原始工程，不內建 AI 源碼整合，不保證被匯入程式的業務功能。
 
-線上入口：[GitHub Pages](https://cw91020251212.github.io/VisionFlow/)。修復依序保存在 `fix/phase1-export-roundtrip`、`fix/phase2-workspace-drafts`、`fix/phase3-pointer-geometry`、`fix/phase4-delivery-resources` 分支，尚未替换此線上版本。第四批包含前三批；PR 逐批以前一批分支為 base，須按序審閱／合併。下載修復分支後也可直接開啟 `index.html`；正常使用不需要 Node、構建流程或後端。`appearance.js`、`folder-import.js`、`canvas.js`、`project-io.js`、`workspace-state.js`、`pointer-tools.js`、`delivery.js` 需與 HTML 放在一起。
+線上入口：[GitHub Pages](https://cw91020251212.github.io/VisionFlow/)。2026-10-14正式整合版包含四批修復及背景貼圖，由累積PR #5合併至main；分批修復分支與歷史仍保留。GitHub Pages以main部署，提交原始碼和部署成功是不同階段，實際結果見本次發布紀錄。下載main後也可直接開啟 `index.html`；正常使用不需要Node、構建流程或後端。`appearance.js`、`folder-import.js`、`canvas.js`、`project-io.js`、`workspace-state.js`、`pointer-tools.js`、`delivery.js`、`background-image.js`需與HTML放在一起。若舊分頁仍使用舊版，先匯出重要設計、關閉所有VisionFlow分頁後重新開啟；不要直接清除網站資料，以免刪除本機草稿。
 
 ## 使用方式
 
@@ -119,9 +119,9 @@ npm test
 
 [MIT License](LICENSE)。
 
-## 背景貼圖（增補分支）
+## 背景貼圖（正式整合版）
 
-`feat/background-textures` 包含第四批及前三批修復；同樣尚未合併正式 Pages。新增啟動檔案 `background-image.js` 必須與其他 JavaScript 放在 `index.html` 旁。
+本次正式整合版包括背景貼圖及四批修復；`feat/background-textures`分支保留作開發紀錄。新增啟動檔案 `background-image.js`必須與其他JavaScript放在`index.html`旁。
 
 先在畫布選取大標題的背景容器（不要只選其中的文字子層），打開右側屬性面板，使用 **背景貼圖 → 上傳／更換圖片**。普通畫布的單件圖形與文字框也支援。可選 Cover 填滿、Contain 完整顯示，或自訂圖片寬度10–400%；以水平／垂直位置滑桿選裁切重心，再選不重複、橫直重複或單方向重複。位置0%對齊左／上，50%置中，100%對齊右／下；圖片剛好填滿該軸時，位置改變不會产生位移，这是 CSS 背景的正常行為。紋理可用自訂小比例搭配重複。原來已有 CSS 貼圖也可直接調大小、位置和重複，不需要先上傳。
 

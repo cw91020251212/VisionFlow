@@ -62,3 +62,11 @@
 只允許新背景圖片為帶有效PNG/JPEG/WebP簽名的base64 data URL，不放寬其他CSS的url/javascript/SVG限制。上傳最大10MiB，解碼尺寸上限12000px及36MP，長邊超過2048px按原比例縮小；大檔轉WebP，單張內嵌資料最多2MiB。不抓取新遠端URL、不上傳雲端、不修改原圖。已有原始CSS背景保留：可直接調大小／位置／重複，遠端仍依賴網路。CSS state/viewport/scope沿用既有機制。異步讀圖綁來源generation、模式、選件、視口、外觀狀態及更換請求序號；切頁/撤銷/清空/後發圖不能被舊圖覆寫，失敗保留原設計。
 
 `appearance.js`於CSS生成、live預覽及JSON／草稿校驗重用同一聲明驗證器；`canvas.js`增加可選backgroundImage/backgroundSize/backgroundPosition/backgroundRepeat欄位並共用渲染，既有v1檔仍讀。`index.html`只加背景貼圖面板、委派事件及漸層替換提示，普通／導入單選均可操作，多選仍選一件修改貼圖。`sw.js`更新版本與資源清單，先前第四批的快取測試同步枚舉新資源，仍用完整成套快取。回歸覆蓋真實上傳、編輯、保存、匯出／回讀、原背景還原、異步取消、偽檔／危險CSS及不影響文字業務。
+
+## 2026-10-14 正式發布（使用者18:52明確批准）
+
+將完整累積的 `feat/background-textures` 經 PR #5 整合到 `main`，不逐批觸發五次中間版本部署。保留所有修復分支與原正式提交 `44e60b6c65a7b096105384518b24b072106eab5c`，建立發布前備份tag；PR #5 base調整為main，使用merge commit保留四批完整歷史。其他PR在確認main含其全部提交後，以已整合的說明關閉仍開啟者，不刪分支或改寫歷史。
+
+使用既有GitHub Pages main根目錄部署，不新增Actions、後端或改權限；正式網址維持 https://cw91020251212.github.io/VisionFlow/ 。應用程式與已通過140項回歸的 `cd0c72c` 一致，發布只更新README現況與紀錄；採語法檢查、既有回歸證據及應用檔案位元核對，不重做相同完整功能驗收。等待這次main提交的Pages部署最終成功，核對HTML與全部JS/圖示/manifest/SW、fresh瀏覽器中新增工具及貼圖入口。
+
+草稿不刪除，v1升級/备份沿既有流程；舊分頁可能仍使用舊服務工作者，提醒先匯出重要設計、關閉舊分頁重開，不建議清除網站資料。`RELEASE-2026-10-14.md`記錄前後版本、累積變更、已驗證結果、快取更新提示及回退方式。
