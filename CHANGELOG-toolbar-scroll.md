@@ -15,4 +15,4 @@
 - `git diff --check`：通过。
 - 隔离预览返回HTTP 200：[查看工具栏改进预览](https://8772-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)。
 
-此版本尚未合并至正式 `main`，因此正式 GitHub Pages 仍是旧工具栏；本次变更会先放入独立修复分支及 PR 供确认。
+修复分支 `feat/toolbar-scrollbar-drag` 已推送，PR [#7](https://github.com/cw91020251212/VisionFlow/pull/7) 已建立，供确认后合并；正式 `main` 与 GitHub Pages 保持不变。
