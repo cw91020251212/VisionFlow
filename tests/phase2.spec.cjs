@@ -166,9 +166,9 @@ for(const kind of ['drag','resize'])test(`in-progress imported ${kind} is not sa
   const original=await page.evaluate(()=>localStorage.getItem(DRAFT_KEY));
   await page.evaluate(kind=>{
     const doc=importedFrame.contentDocument,el=doc.getElementById('card');
-    const event=new doc.defaultView.PointerEvent('pointerdown',{button:0,pointerId:1,screenX:100,screenY:100});Object.defineProperty(event,'target',{value:el});
+    const event=new doc.defaultView.PointerEvent('pointerdown',{button:0,pointerId:1,clientX:100,clientY:100,screenX:100,screenY:100});Object.defineProperty(event,'target',{value:el});
     if(kind==='drag')startImportedDrag(event,el);else startImportedResize(event,el,'se');
-    doc.dispatchEvent(new doc.defaultView.PointerEvent('pointermove',{pointerId:1,screenX:150,screenY:140,altKey:true}));
+    doc.dispatchEvent(new doc.defaultView.PointerEvent('pointermove',{pointerId:1,clientX:150,clientY:140,screenX:150,screenY:140,altKey:true}));
     performQuickSave(true);
   },kind);
   await page.waitForTimeout(450);expect(await page.evaluate(()=>localStorage.getItem(DRAFT_KEY))).toBe(original);
@@ -177,10 +177,10 @@ for(const kind of ['drag','resize'])test(`in-progress imported ${kind} is not sa
   const changed=await page.evaluate(()=>localStorage.getItem(DRAFT_KEY));expect(JSON.parse(changed).appearanceRecords).not.toEqual(JSON.parse(original).appearanceRecords);
   await page.evaluate(({kind,raw})=>{
     const doc=importedFrame.contentDocument,el=doc.getElementById('card');
-    const event=new doc.defaultView.PointerEvent('pointerdown',{button:0,pointerId:1,screenX:100,screenY:100});Object.defineProperty(event,'target',{value:el});
+    const event=new doc.defaultView.PointerEvent('pointerdown',{button:0,pointerId:1,clientX:100,clientY:100,screenX:100,screenY:100});Object.defineProperty(event,'target',{value:el});
     if(kind==='drag')startImportedDrag(event,el);else startImportedResize(event,el,'se');
     window.oldGestureDoc=doc;restoreSnapshot(raw);
-    doc.dispatchEvent(new doc.defaultView.PointerEvent('pointermove',{pointerId:1,screenX:260,screenY:220,altKey:true}));
+    doc.dispatchEvent(new doc.defaultView.PointerEvent('pointermove',{pointerId:1,clientX:260,clientY:220,screenX:260,screenY:220,altKey:true}));
   },{kind,raw:original});
   expect(await page.evaluate(()=>({snap:snapDragActive,guide:guideDrag,cleanup:cancelEditorGesture}))).toEqual({snap:false,guide:null,cleanup:null});
   expect(await page.evaluate(()=>JSON.stringify(appearanceRecords))).toBe(JSON.stringify(JSON.parse(original).appearanceRecords));

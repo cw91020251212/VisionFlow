@@ -79,13 +79,15 @@ async function toggleFullscreen() {
   } catch { setStatus('瀏覽器未允許原生全屏，已使用專注檢視；點「退出」即可恢復原面板。'); }
   finally { fullscreenTransitionPending = false; }
 }
-function registerEditorGesture(cleanup) {
+function registerEditorGesture(cleanup, before = null, beforeHistory = null) {
   clearTimeout(appearanceAutosaveTimer);
+  gestureBefore=before ?? snapshot();
+  gestureHistory=beforeHistory ?? {history:[...history],future:[...future]};
   cancelEditorGesture=cleanup;
 }
 function cancelTransientTools() {
   const cleanup=cancelEditorGesture; cancelEditorGesture=null; cleanup?.();
-  snapDragActive=false; guideDrag=null; isPanning=false; isErasing=false;
+  snapDragActive=false; guideDrag=null; isPanning=false; isErasing=false;isMarquee=false;marquee.style.display='none';
   suppressImportedClick=false; selectedManualGuide=null;
   app.classList.remove('panning'); clearSnapFeedback(); invalidateSnapGeometry();
 }

@@ -142,6 +142,8 @@
     .app.eraser-mode .demo-item { pointer-events: none !important; }
     .app.eraser-mode .resize-handle { display: none !important; }
     
+    .app.box-select-mode .canvas-scroll { cursor: crosshair; }
+    .app.pan-mode .resize-handle { display:none!important; }
     .app.pan-mode .canvas-scroll, .app.pan-mode .canvas-scroll * { cursor: grab !important; }
     .app.panning .canvas-scroll, .app.panning .canvas-scroll * { cursor: grabbing !important; }
     
@@ -228,7 +230,7 @@
       .resizer { display: none; } 
     }
   
-    .selection-marquee { position: absolute; border: 1.5px solid var(--accent); background: rgba(53, 109, 243, 0.15); pointer-events: none; z-index: 10000; display: none; }
+    .selection-marquee { position: fixed; border: 1.5px solid var(--accent); background: rgba(53, 109, 243, 0.15); pointer-events: none; z-index: 10000; display: none; }
     .deep-inspect-list { margin-top: 10px; padding: 8px; background: var(--accent-soft); border-radius: 6px; border: 1px solid var(--accent); }
     .deep-inspect-item { display: flex; align-items: center; gap: 6px; padding: 4px; cursor: pointer; font-size: 11px; border-radius: 4px; }
     .deep-inspect-item:hover { background: rgba(53, 109, 243, 0.1); }
@@ -250,6 +252,7 @@
         <button class="button icon-btn" id="toggle-right" title="顯示/隱藏 設定面板">⚙</button>
         <div class="toolbar-divider"></div>
         
+        <button class="button icon-btn" id="box-select" title="框選所有完整包含的圖層；Ctrl/⌘ 追加" aria-label="矩形框選" aria-pressed="false">▧</button>
         <button class="button icon-btn" id="edit-mode" title="開啟/關閉 編輯模式">✎</button>
         
         <!-- 下拉式繪圖按鈕 -->
@@ -649,6 +652,8 @@
         artboard.appendChild(layer);
       }
       if (layer.parentNode !== artboard) artboard.appendChild(layer);
+      const win=importedMode?importedFrame?.contentWindow:null;
+      layer.style.transform=`translate(${- (win?.scrollX||0)}px,${- (win?.scrollY||0)}px)`;
       layer.style.setProperty('--snap-inv', String(1 / zoom));
       return layer;
     }
@@ -677,63 +682,9 @@
     function clearSnapGuides() { const layer = document.getElementById('snap-layer'); if (layer) layer.innerHTML = ''; }
     function clearSnapFeedback() { clearSnapGuides(); }
 
-    document.querySelector('#pan-tool').addEventListener('click', () => {
-      panMode = !panMode;
-      if (panMode) { eraserMode = false; measureMode = false; document.querySelector('#measure-line').style.display = 'none'; measureState = 'idle'; }
-      updateToolButtons(); setStatus(panMode ? '平移模式開啟：按住畫布拖拉即可移動檢視區域。' : '平移模式已關閉。');
-    });
-
-    canvasScroll.addEventListener('pointerdown', e => {
-      if (!panMode || e.button !== 0) return;
-      isPanning = true; app.classList.add('panning'); panStart = { x: e.clientX, y: e.clientY, scrollLeft: canvasScroll.scrollLeft, scrollTop: canvasScroll.scrollTop };
-      try { canvasScroll.setPointerCapture(e.pointerId); } catch(err){}
-      registerEditorGesture(()=>{try{canvasScroll.releasePointerCapture(e.pointerId);}catch{}isPanning=false;app.classList.remove('panning');});
-      e.preventDefault();
-    });
-    canvasScroll.addEventListener('pointermove', e => {
-      if (!isPanning) return;
-      canvasScroll.scrollLeft = panStart.scrollLeft - (e.clientX - panStart.x); canvasScroll.scrollTop = panStart.scrollTop - (e.clientY - panStart.y);
-    });
-    canvasScroll.addEventListener('pointerup', e => {
-      if (isPanning) { isPanning = false; cancelEditorGesture=null; app.classList.remove('panning'); try { canvasScroll.releasePointerCapture(e.pointerId); } catch(err){} scheduleAppearanceSave(); }
-    });
-
-    document.querySelector('#measure-tool').addEventListener('click', () => {
-      measureMode = !measureMode;
-      if (measureMode) { eraserMode = false; panMode = false; measureState = 'idle'; document.querySelector('#measure-line').style.display = 'none'; } 
-      else { document.querySelector('#measure-indicator').style.display = 'none'; }
-      updateToolButtons(); setStatus(measureMode ? '捲尺開啟：【點擊】設定起點，移動滑鼠，再【點擊】設定終點。尺寸會保持顯示。' : '捲尺已關閉。');
-    });
-
-    canvasScroll.addEventListener('pointermove', e => {
-      if (snapDragActive) return;
-      if (!measureMode && !guideDrag) {
-         document.querySelector('#measure-indicator').style.display = 'none';
-         if (!activeSnapHover) clearSnapFeedback();
-         return;
-      }
-      if (guideDrag) return;
-      const rect = artboard.getBoundingClientRect(); const logicalX = (e.clientX - rect.left) / zoom; const logicalY = (e.clientY - rect.top) / zoom;
-      const geo = snapGeometry([], true); const s = e.altKey ? { x: logicalX, y: logicalY, snapped:false } : resolveSnap(logicalX, logicalY, geo);
-      document.querySelector('#measure-indicator').style.display = 'none';
-      if (s.snapped) { drawSnapFeedback(s, { vLines: s.vLine ? [s.vLine] : [], hLines: s.hLine ? [s.hLine] : [] }); } else clearSnapFeedback();
-      if (measureMode && measureState === 'measuring') { measureEnd = {x: s.x, y: s.y}; updateMeasureLine(); }
-    });
-
-    canvasScroll.addEventListener('click', e => {
-      if (!measureMode) return;
-      const rect = artboard.getBoundingClientRect(); const logicalX = (e.clientX - rect.left) / zoom; const logicalY = (e.clientY - rect.top) / zoom;
-      const geoClick = snapGeometry([], true); const sc = e.altKey ? { x: logicalX, y: logicalY, snapped:false } : resolveSnap(logicalX, logicalY, geoClick);
-      const snapped = { x: sc.x, y: sc.y, snapped: sc.snapped };
-      if (measureState === 'idle' || measureState === 'done') {
-          measureStart = {x: snapped.x, y: snapped.y}; measureState = 'measuring';
-          document.querySelector('#measure-line').style.display = 'block'; updateMeasureLine(true);
-      } else if (measureState === 'measuring') {
-          measureEnd = {x: snapped.x, y: snapped.y}; measureState = 'done'; updateMeasureLine();
-          setStatus('尺寸已鎖定。再點擊畫布可重新量度，或點擊捲尺按鈕關閉。');
-      }
-      scheduleAppearanceSave();
-    });
+    document.querySelector('#pan-tool').addEventListener('click',()=>choosePointerTool('pan'));
+    document.querySelector('#measure-tool').addEventListener('click',()=>choosePointerTool('measure'));
+    document.querySelector('#box-select').addEventListener('click',()=>choosePointerTool('box'));
 
     function updateMeasureLine(reset = false) {
         const line = document.querySelector('#measure-line'); const label = document.querySelector('#measure-label');
@@ -742,7 +693,8 @@
         if (reset || measureState === 'idle') { line.style.width = '0px'; label.textContent = ''; return; }
         const dx = measureEnd.x - measureStart.x; const dy = measureEnd.y - measureStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy); const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-        line.style.left = `${measureStart.x}px`; line.style.top = `${measureStart.y}px`;
+        const sx=importedMode?(importedFrame?.contentWindow?.scrollX||0):0,sy=importedMode?(importedFrame?.contentWindow?.scrollY||0):0;
+        line.style.left = `${measureStart.x-sx}px`; line.style.top = `${measureStart.y-sy}px`;
         line.style.width = `${dist}px`; line.style.transform = `rotate(${angle}deg)`;
         let labelAngle = -angle; if (angle > 90 || angle < -90) { labelAngle += 180; }
         label.innerHTML = `<div style="font-size:14px;">${Math.round(dist)} px</div>${Math.abs(dx) > 1 && Math.abs(dy) > 1 ? `<div style="font-size:10px; font-weight:normal; opacity:0.9; margin-top:2px;">W: ${Math.round(Math.abs(dx))} H: ${Math.round(Math.abs(dy))}</div>` : ''}`;
@@ -926,6 +878,8 @@
     }
 
     function updateToolButtons() {
+      document.querySelector('#box-select')?.classList.toggle('active-tool',boxSelectMode);
+      document.querySelector('#box-select')?.setAttribute('aria-pressed',String(boxSelectMode));
       document.querySelector('#edit-mode')?.classList.toggle('active-tool', editing);
       document.querySelector('#lock-position')?.classList.toggle('active-tool', isPositionLocked);
       document.querySelector('#toggle-guides')?.classList.toggle('active-tool', guidesVisible);
@@ -936,10 +890,13 @@
       document.querySelector('#snap-hover')?.classList.toggle('active-tool', activeSnapHover);
       document.querySelector('#snap-grid-toggle')?.classList.toggle('active-tool', SNAP_CFG.grid);
       app.classList.toggle('eraser-mode', eraserMode); app.classList.toggle('pan-mode', panMode); app.classList.toggle('measure-mode', measureMode);
+      app.classList.toggle('box-select-mode',boxSelectMode);
       app.classList.toggle('position-locked', isPositionLocked);
       updateMeasureLine();
       if (importedFrame?.contentDocument?.documentElement) {
-          if (importedOverlay) importedOverlay.querySelector('.resize-handle.c').style.display = isPositionLocked ? 'none' : '';
+          importedFrame.contentDocument.documentElement.classList.toggle('position-locked',isPositionLocked);
+          importedFrame.contentDocument.documentElement.classList.toggle('pointer-tool',panMode || measureMode || eraserMode || boxSelectMode);
+          updateImportedOverlay();
       }
     }
 
@@ -948,7 +905,7 @@
       const targets = importedMode ? importedGuideTargets : demoGuideTargets;
       const currentKey = importedMode ? current : current?.id;
       const hasCurrentGuide = current && targets.includes(currentKey);
-      eraserMode = false; panMode = false; measureMode = false; updateToolButtons();
+      abortPointerGesture(); boxSelectMode=false; eraserMode = false; panMode = false; measureMode = false; updateToolButtons();
 
       selectedManualGuide = null;
       if (!guideArmed && hasCurrentGuide) {
@@ -973,17 +930,13 @@
       }
     }
 
-    function toggleGuideEraser() {
-      eraserMode = !eraserMode; if (eraserMode) { panMode = false; measureMode = false; }
-      selectedManualGuide = null; updateToolButtons();
-
-      if (importedMode) renderImportedGuides(); else { renderDemo(); renderGuides(); }
-      setStatus(eraserMode ? '擦膠開啟：撳住左鍵掃過參考線即可刪除。' : '擦膠已關閉。');
-    }
+    function toggleGuideEraser() { choosePointerTool('erase'); }
 
     function addManualGuide(kind) {
       savePoint(); const scope = importedMode ? 'imported' : 'demo'; const list = scope === 'imported' ? importedManualGuides : manualGuides;
-      const position = importedMode ? Math.round((kind === 'vertical' ? importedViewport.width : importedViewport.height) / 2) : Math.round((kind === 'vertical' ? (viewportMode === 'mobile' ? 375 : 760) : (viewportMode === 'mobile' ? 812 : 510)) / 2);
+      const width=importedMode?importedViewport.width:(viewportMode==='mobile'?375:1280), height=importedMode?importedViewport.height:(viewportMode==='mobile'?812:720);
+      const win=importedMode?importedFrame.contentWindow:null;
+      const position = Math.round((kind==='vertical'?width/2+(win?.scrollX||0):height/2+(win?.scrollY||0)));
       list.push({ kind, position, copied: false }); selectedManualGuide = { scope, index: list.length - 1, kind };
       guideMode = 'live'; guidesVisible = true; guideArmed = false; updateToolButtons();
       if (importedMode) renderImportedGuides(); else renderGuides();
@@ -992,71 +945,6 @@
     function deleteGuideByKey(scope, key) { savePoint(); const hidden = scope === 'imported' ? hiddenImportedGuideKeys : hiddenDemoGuideKeys; if (!hidden.includes(key)) hidden.push(key); selectedManualGuide = null; updateToolButtons(); if (scope === 'imported') renderImportedGuides(); else renderGuides(); }
     function deleteManualGuide(scope, index) { savePoint(); if (scope === 'imported') importedManualGuides.splice(index, 1); else manualGuides.splice(index, 1); selectedManualGuide = null; updateToolButtons(); if (scope === 'imported') renderImportedGuides(); else renderGuides(); }
     function selectManualGuide(scope, index, meta = {}) { selectedManualGuide = { scope, index, ...meta }; updateToolButtons(); if(scope === 'demo') { if (!isTyping) renderDemoInspector(); } else { if (!isTyping) renderImportedInspector(); } }
-
-    let isMarquee = false; let marqueeStart = { x: 0, y: 0 };
-    const marquee = document.getElementById('selection-marquee');
-    if (marquee) {
-      document.querySelector('.canvas-scroll').addEventListener('pointerdown', e => {
-        if (!editing || eraserMode || panMode || measureMode || e.button !== 0 || e.target.closest('.demo-item') || e.target.closest('.resize-handle') || e.target.closest('.guide-line')) return;
-        isMarquee = true; marqueeStart = { x: e.clientX, y: e.clientY };
-        marquee.style.display = 'block'; marquee.style.left = `${e.clientX}px`; marquee.style.top = `${e.clientY}px`;
-        marquee.style.width = '0px'; marquee.style.height = '0px';
-
-        function onMove(me) {
-          if (!isMarquee) return;
-          const left = Math.min(marqueeStart.x, me.clientX); const top = Math.min(marqueeStart.y, me.clientY);
-          const width = Math.abs(marqueeStart.x - me.clientX); const height = Math.abs(marqueeStart.y - me.clientY);
-          marquee.style.left = `${left}px`; marquee.style.top = `${top}px`; marquee.style.width = `${width}px`; marquee.style.height = `${height}px`;
-        }
-        function onUp(ue) {
-          if (!isMarquee) return;
-          isMarquee = false; marquee.style.display = 'none';
-          const mRect = marquee.getBoundingClientRect();
-          if (mRect.width < 5 && mRect.height < 5) {
-            if (!ue.ctrlKey && !ue.metaKey) { 
-                setDemoSelection([]); 
-                if(importedMode) { importedSelectedElements=[]; importedSelected=null; updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector(); } 
-                else { renderDemo(); if (!isTyping) renderDemoInspector(); }
-            }
-          } else {
-            const selected = [];
-            if (importedMode) {
-              const doc = importedFrame.contentDocument; const iframeRect = importedFrame.getBoundingClientRect();
-              doc.querySelectorAll('*').forEach(el => {
-                if (!isCandidate(el)) return;
-                const r = el.getBoundingClientRect();
-                const sx = importedFrame.contentWindow.scrollX;
-                const sy = importedFrame.contentWindow.scrollY;
-                const screenR = { left: iframeRect.left + (r.left + sx) * zoom, top: iframeRect.top + (r.top + sy) * zoom, right: iframeRect.left + (r.right + sx) * zoom, bottom: iframeRect.top + (r.bottom + sy) * zoom };
-                if (screenR.left < mRect.right && screenR.right > mRect.left && screenR.top < mRect.bottom && screenR.bottom > mRect.top) selected.push(el);
-              });
-              if (ue.ctrlKey || ue.metaKey) {
-                const newSelection = importedSelectionWithGroups([...new Set([...importedSelectedElements, ...selected])]);
-                if (newSelection.length) selectImported(newSelection[0], true);
-                importedSelectedElements = newSelection;
-              } else {
-                const newSelection = importedSelectionWithGroups(selected);
-                if (newSelection.length) selectImported(newSelection[0]);
-                importedSelectedElements = newSelection;
-              }
-              importedSelected = importedSelectedElements[0] || null;
-              updateImportedOverlay(); updateGroupButtonState();
-              renderImportedState();
-            } else {
-              artboard.querySelectorAll('.demo-item').forEach(el => {
-                const r = el.getBoundingClientRect();
-                if (r.left < mRect.right && r.right > mRect.left && r.top < mRect.bottom && r.bottom > mRect.top) selected.push(el.dataset.id);
-              });
-              if (ue.ctrlKey || ue.metaKey) setDemoSelection([...new Set([...selectedIds, ...selected])]); else setDemoSelection(selected);
-              renderDemo();
-              if (!isTyping) renderDemoInspector();
-            }
-          }
-          window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
-        }
-        window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
-      });
-    }
 
     const themes = [
       { id: 'light', name: '光明簡潔', bg: '#ffffff', text: '#17202a', accent: '#356df3', surface: '#ffffff', soft: '#f7f8fa' },
@@ -1151,15 +1039,8 @@
           selectionOverlay.appendChild(handle);
         }
         
-        element.addEventListener('click', event => {
-          if (editing && (event.target.tagName === 'BUTTON' || event.target.tagName === 'A')) { event.preventDefault(); event.stopPropagation(); }
-          if (eraserMode || event.target.closest('.resize-handle')) return; 
-          event.stopPropagation();
-          if (event.metaKey || event.ctrlKey) setDemoSelection(selectedIds.includes(item.id) ? selectedIds.filter(id => id !== item.id) : [...selectedIds, item.id]);
-          else setDemoSelection([item.id]);
-          renderDemo(); if (!isTyping) renderDemoInspector();
-        });
-        element.addEventListener('pointerdown', event => { if (eraserMode || panMode || measureMode || event.button !== 0 || event.target.closest('.resize-handle')) return; startDemoDrag(event); });
+        element.addEventListener('click',event=>{event.stopPropagation();clickSelection(event,item.id);});
+        element.addEventListener('pointerdown',event=>{if(eraserMode || panMode || measureMode || boxSelectMode || event.button!==0 || event.target.closest('.resize-handle'))return;if(preparePointerSelection(event,item.id) && editing && !isPositionLocked)startDemoDrag(event);else{renderDemo();renderDemoInspector();}});
         artboard.appendChild(element);
         if (editing && isSelected) artboard.appendChild(selectionOverlay);
       }
@@ -1199,17 +1080,19 @@
       const target = forcedElement || event.target.closest('.demo-item'); if (!target) return;
       event.preventDefault(); event.stopPropagation();
       const id = target.dataset.id;
-      if (!selectedIds.includes(id)) { if (event.ctrlKey || event.metaKey) setDemoSelection([...selectedIds, id]); else setDemoSelection([id]); }
+      if(event.target.closest('.resize-handle') && (event.ctrlKey || event.metaKey) && !preparePointerSelection(event,id)){renderDemo();renderDemoInspector();return;}
+      if (!selectedIds.includes(id)) setDemoSelection([id]);
+      pointerClickHandled.set(sourceDocument(event),true);
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
       
-      const startX = event.screenX; const startY = event.screenY;
+      const pointerDoc=sourceDocument(event),startPoint=pointerDocumentPoint(event,pointerDoc);
       const initialStates = items.filter(it => selectedIds.includes(it.id)).map(it => ({ item: it, x: it.x, y: it.y }));
       let moved = false; let dragAxis = null;
       invalidateSnapGeometry(); snapDragActive = true;
       const geo = snapGeometry(selectedIds, true);
 
       function move(moveEvent) {
-        let dx = (moveEvent.screenX - startX) / zoom; let dy = (moveEvent.screenY - startY) / zoom;
+        let dx = (pointerDocumentPoint(moveEvent,pointerDoc).x - startPoint.x); let dy = (pointerDocumentPoint(moveEvent,pointerDoc).y - startPoint.y);
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; }
         if (moveEvent.shiftKey) { if (!dragAxis) dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if (dragAxis === 'x') dy = 0; else dx = 0; } else { dragAxis = null; }
@@ -1233,11 +1116,12 @@
         } else clearSnapFeedback();
       }
       function stop(upEvent) {
+        if(!upEvent.cancelled && upEvent.pointerId!==event.pointerId)return;
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
         cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (!upEvent.cancelled && moved) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
+        if (!upEvent.cancelled) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
       }
       registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
@@ -1248,14 +1132,14 @@
       event.preventDefault(); event.stopPropagation();
       const target = event.currentTarget;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
-      const startX = event.screenX; const startY = event.screenY;
+      const pointerDoc=sourceDocument(event),startPoint=pointerDocumentPoint(event,pointerDoc);
       const original = { x: item.x, y: item.y, w: item.w, h: item.h };
       let moved = false;
       invalidateSnapGeometry(); snapDragActive = true;
       const geo = snapGeometry([item.id], true);
 
       function move(moveEvent) {
-        const dx = (moveEvent.screenX - startX) / zoom; const dy = (moveEvent.screenY - startY) / zoom;
+        const dx = (pointerDocumentPoint(moveEvent,pointerDoc).x - startPoint.x); const dy = (pointerDocumentPoint(moveEvent,pointerDoc).y - startPoint.y);
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; }
         
@@ -1310,11 +1194,12 @@
       }
       
       function stop(upEvent) {
+        if(!upEvent.cancelled && upEvent.pointerId!==event.pointerId)return;
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop);
         cancelEditorGesture=null;
         snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
-        if (!upEvent.cancelled && moved) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
+        if (!upEvent.cancelled) { renderDemo(); if(!isTyping) renderDemoInspector(); scheduleAppearanceSave(); }
       }
       registerEditorGesture(()=>stop({pointerId:event.pointerId,cancelled:true}));
       target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop);
@@ -1341,7 +1226,6 @@
             if (event.ctrlKey || event.metaKey) { line.classList.add('guide-copying'); startManualGuideDrag(event, kind, null, position); return; }
             renderGuides();
           });
-          line.addEventListener('pointerenter', () => { if (eraserMode && isErasing) { deleteGuideByKey('demo', key); } });
           layer.appendChild(line);
         }
       });
@@ -1360,7 +1244,6 @@
           if (event.ctrlKey || event.metaKey) { line.classList.add('guide-copying'); startManualGuideDrag(event, guide.kind, null, guide.position); return; }
           selectManualGuide('demo', index); startManualGuideDrag(event, guide.kind, index);
         });
-        line.addEventListener('pointerenter', () => { if (eraserMode && isErasing) deleteManualGuide('demo', index); });
         layer.appendChild(line);
       });
       artboard.appendChild(layer);
@@ -1371,10 +1254,10 @@
       event.preventDefault(); event.stopPropagation();
       
       const evtDoc = (importedMode && importedFrame?.contentDocument) ? importedFrame.contentDocument : document;
-      const rect = (evtDoc === document) ? artboard.getBoundingClientRect() : { left: 0, top: 0 };
-      const startMouseX = event.clientX - rect.left;
-      const startMouseY = event.clientY - rect.top;
+      const startPoint=pointerDocumentPoint(event,evtDoc);
 
+      const before=snapshot(),beforeHistory={history:[...history],future:[...future]};
+      const copied=index===null;
       const list = importedMode ? importedManualGuides : manualGuides;
       
       if (index === null) {
@@ -1385,21 +1268,20 @@
       }
       
       const originPos = list[index].position;
-      const offset = (kind === 'vertical' ? startMouseX : startMouseY) / zoom - originPos;
+      const offset = (kind === 'vertical' ? startPoint.x : startPoint.y) - originPos;
       
       guideDrag = { kind, index, offset };
       document.body.style.cursor = kind === 'vertical' ? 'ew-resize' : 'ns-resize';
       let moved = false;
       invalidateSnapGeometry(); snapDragActive = true;
       const geoGuide = snapGeometry([], true);
+      try{evtDoc.documentElement.setPointerCapture(event.pointerId);}catch{}
 
       function move(moveEvent) {
         moveEvent.preventDefault();
-        const currentMouseX = moveEvent.clientX - rect.left;
-        const currentMouseY = moveEvent.clientY - rect.top;
-        
-        let rawPos = (kind === 'vertical' ? currentMouseX : currentMouseY) / zoom - guideDrag.offset;
-        const crossPos = (kind === 'vertical' ? currentMouseY : currentMouseX) / zoom;
+        const point=pointerDocumentPoint(moveEvent,evtDoc);
+        let rawPos = (kind === 'vertical' ? point.x : point.y) - guideDrag.offset;
+        const crossPos = kind==='vertical'?point.y:point.x;
 
         let snapRes = null;
         if (!moveEvent.altKey) {
@@ -1409,7 +1291,7 @@
           }
         }
 
-        if (!moved) { savePoint(); moved = true; }
+        if (!moved) { if(!copied)savePoint(); moved = true; }
         list[guideDrag.index].position = rawPos;
 
         const layer = importedMode ? (importedFrame?.contentDocument) : document;
@@ -1429,9 +1311,11 @@
       }
 
       function stop(upEvent) {
+        if(!upEvent?.cancelled && upEvent.pointerId!==event.pointerId)return;
         evtDoc.removeEventListener('pointermove', move);
         evtDoc.removeEventListener('pointerup', stop);
         cancelEditorGesture=null;
+        try{evtDoc.documentElement.releasePointerCapture(event.pointerId);}catch{}
         document.body.style.cursor = '';
         guideDrag = null; snapDragActive = false; clearSnapFeedback(); invalidateSnapGeometry();
         if (upEvent?.cancelled) return;
@@ -1445,7 +1329,7 @@
         }
         scheduleAppearanceSave();
       }
-      registerEditorGesture(()=>stop({cancelled:true}));
+      registerEditorGesture(()=>stop({cancelled:true}),before,beforeHistory);
       evtDoc.addEventListener('pointermove', move); evtDoc.addEventListener('pointerup', stop);
     }
 
@@ -1469,7 +1353,8 @@
     function startImportedDrag(event, element) {
       if (isPositionLocked || eraserMode || !editing || event.button !== 0) return; 
       event.preventDefault(); event.stopPropagation();
-      if (!importedSelectedElements.includes(element)) { selectImported(element, event.ctrlKey || event.metaKey); }
+      if (!importedSelectedElements.includes(element)) selectImported(element);
+      pointerClickHandled.set(sourceDocument(event),true);
       if (importedSelectedElements.some(el => recordFor(el, false)?.scope === 'all-matching')) { setStatus('拖動請先切換至「僅此元素」，保護同類項的原始位移。'); return; }
       const doc = importedFrame.contentDocument; const target = event.target;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
@@ -1478,17 +1363,18 @@
       const sx = win ? win.scrollX : 0;
       const sy = win ? win.scrollY : 0;
 
-      const initialStates = importedSelectedElements.map(el => {
+      const movableRoots = importedSelectedElements.filter(el=>!importedSelectedElements.some(parent=>parent!==el && parent.contains(el)));
+      const initialStates = movableRoots.map(el => {
           const st = syncStateContext(el); const r = el.getBoundingClientRect();
           return { el, x: st.dx, y: st.dy, state: st, baseX: (r.left + sx) - st.dx, baseY: (r.top + sy) - st.dy, w: r.width, h: r.height };
       });
 
-      const startX = event.screenX; const startY = event.screenY; let moved = false; let dragAxis = null;
+      const pointerDoc=sourceDocument(event),startPoint=pointerDocumentPoint(event,pointerDoc); let moved = false; let dragAxis = null;
       invalidateSnapGeometry(); snapDragActive = true;
       const geo = snapGeometry(importedSelectedElements, true);
 
       function move(moveEvent) {
-        let dx = (moveEvent.screenX - startX) / zoom; let dy = (moveEvent.screenY - startY) / zoom;
+        let dx = (pointerDocumentPoint(moveEvent,pointerDoc).x - startPoint.x); let dy = (pointerDocumentPoint(moveEvent,pointerDoc).y - startPoint.y);
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; suppressImportedClick = true; }
         if (moveEvent.shiftKey) { if (!dragAxis) dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if (dragAxis === 'x') dy = 0; else dx = 0; } else { dragAxis = null; }
@@ -1511,6 +1397,7 @@
         } else clearSnapFeedback();
       }
       function stop(upEvent) {
+        if(!upEvent.cancelled && upEvent.pointerId!==event.pointerId)return;
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', stop);
         cancelEditorGesture=null;
@@ -1522,13 +1409,14 @@
     }
     
     function startImportedResize(event, element, direction) {
-      if (eraserMode || !editing || event.button !== 0) return;
+      if (eraserMode || panMode || measureMode || boxSelectMode || importedSelectedElements.length!==1 || !editing || event.button !== 0) return;
       event.preventDefault(); event.stopPropagation();
+      pointerClickHandled.set(sourceDocument(event),true);
       if (recordFor(element, false)?.scope === 'all-matching') { setStatus('同類範圍請使用寬高欄位；控制點可能涉及位移，請先切換至「僅此元素」。'); return; }
       const doc = importedFrame.contentDocument; const target = event.target;
       if (target.setPointerCapture) { try { target.setPointerCapture(event.pointerId); } catch(e) {} }
       
-      const startX = event.screenX; const startY = event.screenY;
+      const pointerDoc=sourceDocument(event),startPoint=pointerDocumentPoint(event,pointerDoc);
       const state = syncStateContext(element);
       const original = { dx: state.dx, dy: state.dy, w: state.width, h: state.height };
       const elRect = element.getBoundingClientRect(); 
@@ -1541,7 +1429,7 @@
       const geo = snapGeometry([element], true);
 
       function move(moveEvent) {
-        const dx = (moveEvent.screenX - startX) / zoom; const dy = (moveEvent.screenY - startY) / zoom;
+        const dx = (pointerDocumentPoint(moveEvent,pointerDoc).x - startPoint.x); const dy = (pointerDocumentPoint(moveEvent,pointerDoc).y - startPoint.y);
         if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) < 4) return;
         if (!moved) { savePoint(); moved = true; suppressImportedClick = true; }
         
@@ -1593,6 +1481,7 @@
       }
       
       function stop(upEvent) {
+        if(!upEvent.cancelled && upEvent.pointerId!==event.pointerId)return;
         if (target.releasePointerCapture) { try { target.releasePointerCapture(upEvent.pointerId); } catch(e) {} }
         doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', stop);
         cancelEditorGesture=null;
@@ -1641,7 +1530,6 @@
             selectManualGuide('imported', null, { generated:true, key, kind:g.k });
             renderImportedGuides();
           });
-          line.addEventListener('pointerenter', () => { if (eraserMode && isErasing) deleteGuideByKey('imported', key); });
           layer.appendChild(line);
         });
       });
@@ -1662,16 +1550,15 @@
           if (e.ctrlKey || e.metaKey) { line.classList.add('guide-copying'); startManualGuideDrag(e, guide.kind, null, guide.position); return; }
           selectManualGuide('imported', index); startManualGuideDrag(e, guide.kind, index);
         });
-        line.addEventListener('pointerenter', () => { if (eraserMode && isErasing) deleteManualGuide('imported', index); });
         layer.appendChild(line);
       });
-      doc.body.appendChild(layer);
+      helperRoot(doc).appendChild(layer);
     }
 
     function addImportedOverlay() { 
       const doc = importedFrame.contentDocument; importedOverlay = doc.createElement('div'); importedOverlay.id = 'ui-editor-overlay'; importedOverlay.dataset.vfHelper = 'selection';
       importedOverlay.innerHTML = ['n','s','e','w','nw','ne','sw','se','c'].map(direction => `<button class="resize-handle ${direction}" data-direction="${direction}"></button>`).join(''); 
-      doc.body.appendChild(importedOverlay); 
+      helperRoot(doc).appendChild(importedOverlay);
       doc.querySelectorAll('#ui-editor-overlay .resize-handle').forEach(handle => handle.addEventListener('pointerdown', event => { 
         const dir = handle.dataset.direction; dir === 'c' ? startImportedDrag(event, importedSelected) : startImportedResize(event, importedSelected, dir); 
       })); 
@@ -1679,6 +1566,7 @@
     
     function updateImportedOverlay() { 
       importedSelectedElements.forEach(ensureImportedState);
+      if(importedOverlay)importedOverlay.querySelectorAll('.resize-handle').forEach(handle=>handle.style.setProperty('display',panMode || measureMode || eraserMode || boxSelectMode || (handle.dataset.direction==='c'?isPositionLocked:importedSelectedElements.length!==1)?'none':'block','important'));
       if (!importedOverlay || importedSelectedElements.length === 0) { if (importedOverlay) importedOverlay.style.display = 'none'; return; }
       let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
       importedSelectedElements.forEach(el => { const rect = el.getBoundingClientRect(); if (rect.left < minL) minL = rect.left; if (rect.top < minT) minT = rect.top; if (rect.right > maxR) maxR = rect.right; if (rect.bottom > maxB) maxB = rect.bottom; });
@@ -1688,9 +1576,9 @@
 
     function bindImportedFrame() {
       isIframeLoaded = true;
-      const doc = importedFrame.contentDocument; if (!doc?.body) { renderLayers(); return; }
+      const doc = importedFrame.contentDocument; bindPointerWorkspace(doc); if (!doc?.body) { renderLayers(); return; }
       const style = doc.createElement('style'); style.id = 'ui-editor-style'; style.dataset.vfHelper = 'style';
-      style.textContent = '#ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
+      style.textContent = '.guide-line::after{content:"";position:absolute}.guide-line.vertical::after{top:0;bottom:0;left:-8px;width:17px}.guide-line.horizontal::after{left:0;right:0;top:-8px;height:17px}html.pointer-tool #ui-editor-overlay .resize-handle{display:none!important} #ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
       const headOrBody = doc.head || doc.body || doc.documentElement;
       if (headOrBody) headOrBody.appendChild(style); 
       addImportedOverlay();
@@ -1700,18 +1588,10 @@
       updateImportedViewport();
       
       doc.addEventListener('pointerdown', event => {
-        if (eraserMode || panMode || measureMode || event.button !== 0 || !editing || event.target.closest('#ui-editor-overlay')) return;
+        if (eraserMode || panMode || measureMode || boxSelectMode || event.button !== 0 || !editing || event.target.closest('#ui-editor-overlay')) return;
         if (event.target.closest('[data-vf-helper="guides"]')) return;
         const element = importedCandidate(event.target); if (!isCandidate(element)) return;
-        startImportedDrag(event, element);
-      }, true);
-
-      doc.addEventListener('pointermove', event => {
-        if (!activeSnapHover || guideDrag) return;
-        const geo = snapGeometry([], true);
-        const s = event.altKey ? { snapped:false } : resolveSnap(event.clientX, event.clientY, geo);
-        if (s.snapped) drawSnapFeedback(s, { vLines: s.vLine ? [s.vLine] : [], hLines: s.hLine ? [s.hLine] : [] });
-        else clearSnapFeedback();
+        if(preparePointerSelection(event,element))startImportedDrag(event, element);
       }, true);
       
       doc.addEventListener('contextmenu', event => {
@@ -1726,35 +1606,20 @@
         document.querySelector('#ctx-group').disabled = selectedItems.length <= 1 || allSameGroup;
         document.querySelector('#ctx-ungroup').disabled = !allSameGroup;
         ctxMenu.style.display = 'flex';
-        let x = event.clientX + importedFrame.getBoundingClientRect().left;
-        let y = event.clientY + importedFrame.getBoundingClientRect().top;
+        const point=pointerHostPoint(event,doc);let x=point.x,y=point.y;
         if (x + 150 > window.innerWidth) x -= 150;
         if (y + 100 > window.innerHeight) y -= 100;
         ctxMenu.style.left = `${Math.max(4, x)}px`; ctxMenu.style.top = `${Math.max(4, y)}px`;
       }, true);
 
       doc.addEventListener('click', event => {
-        if (editing && (event.target.tagName === 'BUTTON' || event.target.tagName === 'A' || event.target.closest('a') || event.target.closest('button'))) { event.preventDefault(); event.stopPropagation(); }
-        if (eraserMode || suppressImportedClick) { if (suppressImportedClick) suppressImportedClick = false; event.preventDefault(); event.stopPropagation(); return; }
-        if (!editing || event.target.closest('#ui-editor-overlay')) return;
-        const element = importedCandidate(event.target); 
-        if (isCandidate(element)) { 
-            event.preventDefault(); event.stopPropagation(); 
-            if (event.ctrlKey || event.metaKey) {
-                if (importedSelectedElements.includes(element)) {
-                    importedSelectedElements = importedSelectedElements.filter(el => el !== element);
-                    importedSelected = importedSelectedElements[0] || null;
+        if(!editing || event.target.closest('[data-vf-helper]'))return;
+        event.preventDefault();event.stopPropagation();
+        const element=importedCandidate(event.target);if(isCandidate(element))clickSelection(event,element);
+      },true);
+      importedFrame.contentWindow.addEventListener('scroll',()=>{updateImportedOverlay();renderImportedGuides();updateMeasureLine();clearSnapFeedback();invalidateSnapGeometry();});
 
-
-                    updateImportedOverlay(); renderLayers(); if (!isTyping) renderImportedInspector();
-                } else { selectImported(element, true); }
-            } else { selectImported(element, false); }
-        }
-      }, true);
-      
-      importedFrame.contentWindow.addEventListener('scroll', () => { updateImportedOverlay(); });
-
-      restoreImportedIdentity();
+      restoreImportedIdentity();updateToolButtons();
       watchImportedLayers();
       renderLayers(); if (!isTyping) renderImportedInspector();
     }
@@ -1802,7 +1667,7 @@
             layers.innerHTML = '<div class="empty">讀取中…</div>';
         } else if (importedLayers.length > 0) {
             layers.innerHTML = importedLayers.map((item, index) => `<button class="layer ${importedSelectedElements.includes(item.element) ? 'selected' : ''}" data-index="${index}"><span class="layer-icon">▤</span><span>${escapeHtml(item.name)}</span></button>`).join(''); 
-            layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { const target = importedLayers[Number(element.dataset.index)].element; selectImported(target, event.metaKey || event.ctrlKey); })); 
+            layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { const target = importedLayers[Number(element.dataset.index)].element; clickSelection(event,target); }));
         } else {
             layers.innerHTML = '<div class="empty">找不到可編輯圖層</div>';
         }
@@ -1811,8 +1676,7 @@
       layers.innerHTML = items.length ? items.map(item => { return `<button class="layer ${selectedIds.includes(item.id) ? 'selected' : ''}" data-id="${item.id}"><span class="layer-icon">▤</span><span>${escapeHtml(item.name)}</span></button>`; }).join('') : '<div class="empty">請匯入檔案。</div>'; 
       layers.querySelectorAll('.layer').forEach(element => element.addEventListener('click', event => { 
         const id = element.dataset.id; 
-        if (event.metaKey || event.ctrlKey) setDemoSelection(selectedIds.includes(id) ? selectedIds.filter(value => value !== id) : [...selectedIds, id]); 
-        else setDemoSelection([id]); renderDemo(); 
+        clickSelection(event,id);
       })); 
     }
 
@@ -1823,7 +1687,7 @@
       selected.forEach((s, idx) => {
           const name = importedMode ? importedName(s) : s.name;
           const id = importedMode ? '' : s.id;
-          listHtml += '<div class="deep-inspect-item" data-id="' + id + '" data-idx="' + idx + '" style="background: #fff; border: 1px solid var(--line); margin-bottom: 2px;"><span style="color:var(--accent)">▤</span> ' + escapeHtml(name) + '</div>';
+          listHtml += '<button type="button" class="deep-inspect-item" data-id="' + escapeHtml(id) + '" data-idx="' + idx + '" style="background: #fff; border: 1px solid var(--line); margin-bottom: 2px;"><span style="color:var(--accent)">▤</span> ' + escapeHtml(name) + '</button>';
       });
       return '<div class="section" style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; border: 1px dashed var(--accent);"><div style="font-size: 10px; font-weight: bold; color: var(--accent); margin-bottom: 4px;">深層選取 (共 ' + selected.length + ' 個)</div><div class="deep-inspect-list" style="margin-top: 0; padding: 0; border: none; background: transparent;">' + listHtml + '</div></div>';
     }
@@ -1895,6 +1759,7 @@
     }
 
     function renderDemoInspector() {
+      if(selectedIds.length>1){renderBatchInspector();return;}
       const item = selectedDemo();
       if (!item) { inspector.innerHTML = '<div class="empty" style="margin-top:24px;">請喺畫布點選物件以編輯屬性。</div>'; return; }
       
@@ -2000,6 +1865,7 @@
     }
 
     function renderImportedInspector() {
+      if(importedSelectedElements.length>1){renderBatchInspector();return;}
       if (!importedSelected) { inspector.innerHTML = '<div class="empty" style="margin-top:24px;">原有畫面已保留。請喺畫布點選。</div>'; return; }
       const state = syncStateContext(importedSelected);
       const color = state.colorOverride || state.originalColor || '#ffffff';
@@ -2067,6 +1933,7 @@
     }
 
     inspector.addEventListener('input', e => {
+       if(updateBatchAppearance(e,false))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
               if (e.target.id.startsWith('itext') || e.target.id.startsWith('ifont') || e.target.id.startsWith('ishadowC')) { updateImportedText(e, false); } else { updateImported(e, false); }
@@ -2075,6 +1942,7 @@
     });
     
     inspector.addEventListener('change', e => {
+       if(updateBatchAppearance(e,true))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
               if (e.target.id.startsWith('itext') || e.target.id.startsWith('ifont') || e.target.id.startsWith('ishadowC')) { updateImportedText(e, true); } else { updateImported(e, true); }
@@ -2110,8 +1978,8 @@
     document.querySelector('#close-inspector-btn').addEventListener('click', () => { document.querySelector('.workspace').classList.add('right-closed'); scheduleLayoutRefresh(); });
     document.querySelector('#fit-view').addEventListener('click',()=>fitView());
 
-    document.querySelector('#edit-mode').addEventListener('click', () => { editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
-    document.querySelector('#toggle-viewport').addEventListener('click', () => { savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
+    document.querySelector('#edit-mode').addEventListener('click', () => { abortPointerGesture(); boxSelectMode=false; editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
+    document.querySelector('#toggle-viewport').addEventListener('click', () => { abortPointerGesture(); savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
       importRequestSequence++;
@@ -2148,18 +2016,6 @@
       updateToolButtons();
       setStatus(activeSnapHover ? '鎖點預覽已開啟：移動滑鼠即可睇到交點（洋紅 ✕）、端點（綠方）、中點（青菱）、線上（紅圈）。' : '鎖點預覽已關閉。');
     });
-
-    canvasScroll.addEventListener('pointermove', e => {
-      if (snapDragActive) return;
-      if (!activeSnapHover || measureMode || guideDrag || isPanning) return;
-      const rect = artboard.getBoundingClientRect();
-      const lx = (e.clientX - rect.left) / zoom, ly = (e.clientY - rect.top) / zoom;
-      const geo = snapGeometry([], true);
-      const s = e.altKey ? { snapped:false } : resolveSnap(lx, ly, geo);
-      if (s.snapped) drawSnapFeedback(s, { vLines: s.vLine ? [s.vLine] : [], hLines: s.hLine ? [s.hLine] : [] });
-      else clearSnapFeedback();
-    });
-    canvasScroll.addEventListener('pointerleave', () => { if (activeSnapHover) clearSnapFeedback(); });
 
     document.querySelector('#toggle-guides').addEventListener('click', cycleGuideMode);
     document.querySelector('#guide-eraser').addEventListener('click', toggleGuideEraser);
@@ -2208,6 +2064,7 @@
   </script>
   <script src="folder-import.js"></script>
   <script src="workspace-state.js"></script>
+  <script src="pointer-tools.js"></script>
   <script src="canvas.js"></script>
   <script src="project-io.js"></script>
   <script src="appearance.js"></script>

@@ -1,7 +1,7 @@
 // VisionFlow static application cache. Imported projects are never cached here.
-const CACHE_NAME = 'visionflow-phase2-v4';
+const CACHE_NAME = 'visionflow-appearance-phase3-pointer-v1';
 const SCOPE = self.registration.scope;
-const APP_FILES = ['./', './index.html', './appearance.js', './folder-import.js', './canvas.js', './project-io.js', './workspace-state.js', './icon.png', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './manifest.json'];
+const APP_FILES = ['./', './index.html', './appearance.js', './folder-import.js', './canvas.js', './project-io.js', './workspace-state.js', './pointer-tools.js', './icon.png', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './manifest.json'];
 const APP_URLS = APP_FILES.map(path => new URL(path, SCOPE).href);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_URLS)).then(() => self.skipWaiting()));

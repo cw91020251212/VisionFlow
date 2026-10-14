@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
-for (const file of ['appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'sw.js']) {
+for (const file of ['appearance.js', 'folder-import.js', 'canvas.js', 'project-io.js', 'workspace-state.js', 'pointer-tools.js', 'sw.js']) {
   new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 const html = fs.readFileSync('index.html', 'utf8');

@@ -498,13 +498,13 @@ function watchImportedLayers() {
 }
 function scheduleAppearanceSave() {
   clearTimeout(appearanceAutosaveTimer);
-  if (snapDragActive || guideDrag || isPanning || isErasing) return;
+  if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) return;
   appearanceAutosaveTimer=setTimeout(()=>performQuickSave(true),350);
 }
 function performQuickSave(silent = false) {
   try {
     if (draftRecoveryBlocked) { setStatus('原草稿無法恢復，已停止自動覆寫；請先下載草稿備份。'); return; }
-    if (snapDragActive || guideDrag || isPanning || isErasing) { if (!silent) setStatus('手勢進行中，請完成拖動後再暫存；尚未覆寫草稿。'); return; }
+    if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) { if (!silent) setStatus('手勢進行中，請完成拖動後再暫存；尚未覆寫草稿。'); return; }
     const previous=localStorage.getItem(DRAFT_KEY);
     if (previous !== null) {
       try { readDraftSnapshot(previous); }
