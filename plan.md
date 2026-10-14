@@ -52,3 +52,13 @@
 新增小型 `delivery.js`：分享選項對話框、原生 File 分享／下載後備、已存在的 share_target GET 收件顯示及相對快捷入口、PWA 狀態與安全更新。收件僅顯示文字／網址，明確按鈕才加入交接說明，絕不 fetch 網址或當 HTML 執行。新建快捷入口只打開面板，不自動清空使用者草稿。
 
 `sw.js` 真正註冊且限定自身 scope 與應用檔案。每版先完整快取固定應用檔案，已控制頁面 cache-first 使用成套版本，更新等待使用者；只有草稿成功保存才可要求啟用新版，不自動刷新多分頁。file:// 繼續正常編輯、下載且明示無離線註冊。`index.html` 保留原工具式外觀，只加小屏橫向工具列提示、資源報告與分享／更新入口。`tests/phase4.spec.cjs` 驗證生命週期、失敗不覆寫、報告回读、分享後備和離線完整套件；Chromium 回歸結果與未驗證瀏覽器矩陣如實記錄。
+
+## 2026-10-14 背景貼圖增補
+
+基於第四批 `6351f26affc283ca65ea1a91af66fcc1f865a027`，分支 `feat/background-textures`，PR base第四批；保留四批預覽與正式main，不直接上線。針對大標題／容器的 CSS背景，以及普通畫布圖形／文字的背景提供貼圖，非Photoshop像素編輯，不改前景img的src／圖內文字／業務功能。
+
+新增小型 `background-image.js` 共用：安全 raster data URL／CSS声明驗證、PNG/JPEG/WebP檔案選擇與本機等比例縮小、背景面板及單件更新。背景採用 background-image/size/position/repeat長寫，不用會抹掉背景色的 shorthand。提供cover、contain、自訂宽度百分比，X/Y百分比位置及repeat；上傳新圖或移除是明確替換目前圖片／漸層，原多層背景只調位置/大小時不拆解它，界面說明全部背景層受影響。導入模式另提供還原原背景，刪除本視口／狀態的背景override，恢復原來源或default狀態。
+
+只允許新背景圖片為帶有效PNG/JPEG/WebP簽名的base64 data URL，不放寬其他CSS的url/javascript/SVG限制。上傳最大10MiB，解碼尺寸上限12000px及36MP，長邊超過2048px按原比例縮小；大檔轉WebP，單張內嵌資料最多2MiB。不抓取新遠端URL、不上傳雲端、不修改原圖。已有原始CSS背景保留：可直接調大小／位置／重複，遠端仍依賴網路。CSS state/viewport/scope沿用既有機制。異步讀圖綁來源generation、模式、選件、視口、外觀狀態及更換請求序號；切頁/撤銷/清空/後發圖不能被舊圖覆寫，失敗保留原設計。
+
+`appearance.js`於CSS生成、live預覽及JSON／草稿校驗重用同一聲明驗證器；`canvas.js`增加可選backgroundImage/backgroundSize/backgroundPosition/backgroundRepeat欄位並共用渲染，既有v1檔仍讀。`index.html`只加背景貼圖面板、委派事件及漸層替換提示，普通／導入單選均可操作，多選仍選一件修改貼圖。`sw.js`更新版本與資源清單，先前第四批的快取測試同步枚舉新資源，仍用完整成套快取。回歸覆蓋真實上傳、編輯、保存、匯出／回讀、原背景還原、異步取消、偽檔／危險CSS及不影響文字業務。

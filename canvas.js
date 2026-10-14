@@ -13,6 +13,16 @@ const CANVAS_CSS = {
   fontFamily: 'font-family', customBorderRadius: 'border-radius', clipPath: 'clip-path'
 };
 
+function validateCanvasBackground(item) {
+  const clean={},fields={backgroundImage:'background-image',backgroundSize:'background-size',backgroundPosition:'background-position',backgroundRepeat:'background-repeat'};
+  for(const [key,css] of Object.entries(fields)) {
+    if(item?.[key]===undefined)continue;
+    if(!safeAppearanceStyle(css,item[key]))throw new Error('畫布背景貼圖格式無效：'+key);
+    clean[key]=item[key];
+  }
+  return clean;
+}
+
 function validateCanvasData(data) {
   if (!data || data.format !== CANVAS_FORMAT || !Array.isArray(data.items) || data.items.length > 1000)
     throw new Error('不是支援的 VisionFlow 畫布專案（最多 1000 個圖層）。');
@@ -47,6 +57,7 @@ function validateCanvasData(data) {
         throw new Error('畫布樣式無效：' + key);
       clean[key] = item[key];
     }
+    Object.assign(clean,validateCanvasBackground(item));
     for (const key of ['name', 'content']) {
       if (item[key] == null) continue;
       if (typeof item[key] !== 'string' || item[key].length > 10000) throw new Error('畫布文字無效。');
@@ -85,7 +96,13 @@ function createCanvasElement(item, doc = document) {
     borderRadius: item.customBorderRadius || `${item.borderRadius || 0}px`
   });
   if (item.clipPath) element.style.clipPath = item.clipPath;
-  if (item.gradient) element.style.background = `linear-gradient(${item.gAngle ?? 90}deg, ${item.gStart || '#fff'}, ${item.gEnd || '#000'})`;
+  if (item.gradient) element.style.backgroundImage = `linear-gradient(${item.gAngle ?? 90}deg, ${item.gStart || '#fff'}, ${item.gEnd || '#000'})`;
+  if(item.backgroundImage && !item.gradient) {
+    element.style.backgroundImage=item.backgroundImage;
+    element.style.backgroundSize=item.backgroundSize||'cover';
+    element.style.backgroundPosition=item.backgroundPosition||'50% 50%';
+    element.style.backgroundRepeat=item.backgroundRepeat||'no-repeat';
+  }
   if (item.shadow) element.style.boxShadow = `${item.sX || 0}px ${item.sY || 0}px ${item.sBlur || 0}px ${item.sColor || 'rgba(0,0,0,0.2)'}`;
   const text = doc.createElement('div');
   Object.assign(text.style, {
@@ -133,7 +150,7 @@ function buildCanvasHtml() {
 
 function importCanvasData(value) {
   const data = validateCanvasData(value); // Validate completely before changing the current design.
-  savePoint();
+  cancelBackgroundUpload();savePoint();
   cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
   measureState='idle'; measureStart={x:0,y:0}; measureEnd={x:0,y:0};
   sourceGeneration++; importedMode = false; importedFrame = null;

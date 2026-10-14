@@ -27,7 +27,7 @@ let importRequestSequence = 0;
 const DRAFT_KEY = 'visionflow-appearance-draft-v1';
 const PRESERVE = ['text', 'links', 'image-source', 'click-handler', 'form-behavior', 'data-logic', 'program-state'];
 const VALID_STATES = ['default', 'hover', 'focus', 'disabled', 'loading'];
-const STYLE_ALLOWLIST = new Set(['background-color', 'background-image', 'border-radius', 'border-width', 'border-style', 'border-color', 'box-shadow', 'font-size', 'font-family', 'color', 'text-shadow', 'width', 'height', 'box-sizing', 'translate']);
+const STYLE_ALLOWLIST = new Set(['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'border-radius', 'border-width', 'border-style', 'border-color', 'box-shadow', 'font-size', 'font-family', 'color', 'text-shadow', 'width', 'height', 'box-sizing', 'translate']);
 
 function splitCssList(value) {
   const parts=[]; let depth=0, start=0;
@@ -221,7 +221,7 @@ function cssRules(records, simulate = false) {
     if (simulate && (rec.viewport !== viewportMode || (rec.state !== 'default' && rec.state !== appearanceState))) continue;
     const selector = rec.scope === 'all-matching' ? rec.matchingSelector : rec.target.selector;
     if (!safeSelector(selector)) continue;
-    const declarations = Object.entries(rec.styles).filter(([k,v]) => STYLE_ALLOWLIST.has(k) && typeof v === 'string' && !/[;{}<>]/.test(v) && !/url\s*\(|expression\s*\(/i.test(v)).map(([k,v]) => `${k}:${v} !important`).join(';');
+    const declarations = Object.entries(rec.styles).filter(([k,v]) => safeAppearanceStyle(k,v)).map(([k,v]) => `${k}:${v} !important`).join(';');
     if (!declarations) continue;
     const rule = `${simulate ? selector : stateSelector(boostSelector(selector),rec.state)}{${declarations}}`;
     css += simulate ? rule + '\n' : `@media (${rec.viewport === 'mobile' ? 'max-width:700px' : 'min-width:701px'}){${rule}}\n`;
@@ -248,7 +248,7 @@ function refreshAppearanceStyles() {
       if(!previewInlineCache.has(el)) previewInlineCache.set(el,new Map());
       const props=previewInlineCache.get(el);
       for(const [key,value] of Object.entries(rec.styles)) {
-        if(!STYLE_ALLOWLIST.has(key)) continue;
+        if(!safeAppearanceStyle(key,value)) continue;
         if(!props.has(key)) props.set(key,{value:el.style.getPropertyValue(key),priority:el.style.getPropertyPriority(key)});
         el.style.setProperty(key,value,'important');
       }
@@ -292,7 +292,10 @@ function updateImported(event, commit = false) {
       const [key, css, unit] = direct[id]; s[key] = unit ? clamp(Number(field.value),0,10000) : field.value;
       rec.styles[css] = `${s[key]}${unit}`;
     } else if (['igradient','igStart','igEnd','igAngle'].includes(id)) {
-      if (id === 'igradient') s.gradient = field.checked;
+      if (id === 'igradient') {
+        s.gradient = field.checked;
+        if(s.gradient) {delete rec.styles['background-size'];delete rec.styles['background-position'];delete rec.styles['background-repeat'];}
+      }
       else s[{igStart:'gStart',igEnd:'gEnd',igAngle:'gAngle'}[id]] = field.value;
       if(id !== 'igradient' && !s.gradientParts) { setStatus('複雜或多層背景不能局部解析。若確定要替換，請先關閉再啟用新漸層。'); return; }
       const gradient=s.gradientParts||{angle:'90deg',stops:['#ffffff','#000000']};
@@ -349,7 +352,7 @@ function validateAppearanceData(data) {
     if (rec.page !== data.source.page) throw new Error('JSON 的來源檔案／頁面／校驗值不一致；外觀紀錄必須屬於目前入口。');
     if (rec.scope === 'all-matching' && !safeSelector(rec.matchingSelector)) throw new Error('同類元素 selector 不完整。');
     if (rec.scope === 'all-matching' && 'translate' in rec.styles) throw new Error('同類元素位置不能共用固定 translate，請拆分成逐元素布局意圖。');
-    for (const [k,v] of Object.entries(rec.styles)) if (!STYLE_ALLOWLIST.has(k) || typeof v !== 'string' || /[;{}<>]/.test(v) || /url\s*\(|expression\s*\(/i.test(v)) throw new Error('外觀檔案含有不支援的 CSS 屬性或值。');
+    for (const [k,v] of Object.entries(rec.styles)) if (!safeAppearanceStyle(k,v)) throw new Error('外觀檔案含有不支援的 CSS 屬性或值。');
   }
   return data;
 }
@@ -443,6 +446,7 @@ function snapshot(includePageSessions = true) {
   });
 }
 function restoreSnapshot(value, fromDraft = false) {
+  cancelBackgroundUpload();
   const s = readDraftSnapshot(value), sameDocument = importedMode && s.importedMode && s.importedSourceHtml === importedSourceHtml && s.importedHtml === importedHtml;
   cancelTransientTools(); zoomRevision++; fitImportedOnLoad=false;
   importRequestSequence++;
@@ -540,6 +544,7 @@ function previewSource(html) {
   return '<!doctype html>\n'+doc.documentElement.outerHTML;
 }
 async function loadSelectedFiles(files, entryPath, switchingPage = false) {
+  cancelBackgroundUpload();
   const request = ++importRequestSequence;
   try {
     if (draftRecoveryBlocked) throw new Error('原草稿仍受保護，請先下載草稿備份並在另一瀏覽器工作區開啟新專案。');
@@ -613,7 +618,7 @@ async function loadSelectedFiles(files, entryPath, switchingPage = false) {
 function initializeAppearanceEditor() {
   document.getElementById('export-json').addEventListener('click',()=>downloadAppearance('json'));
   document.getElementById('vf-edit-state').addEventListener('change',e=>{
-    savePoint(); appearanceState=e.target.value; importedSelectedElements.forEach(el=>{const s=ensureImportedState(el);s.context='';});
+    cancelBackgroundUpload(); savePoint(); appearanceState=e.target.value; importedSelectedElements.forEach(el=>{const s=ensureImportedState(el);s.context='';});
     refreshAppearanceStyles(); importedSelectedElements.forEach(syncStateContext); updateImportedOverlay(); renderImportedInspector(); scheduleAppearanceSave();
   });
   for (const id of ['vf-project-name','vf-page-path','vf-user-notes']) for(const type of ['input','change']) document.getElementById(id).addEventListener(type,e=>{

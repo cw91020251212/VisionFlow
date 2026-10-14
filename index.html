@@ -1795,7 +1795,7 @@
       availableFonts.forEach(f => { fontOptions += '<option value="' + f + '" ' + (item.fontFamily === f ? 'selected' : '') + '>' + f + '</option>'; });
       
       let html = '<div class="section" style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent); color: var(--accent);"><div style="font-size: 10px; font-weight: bold; opacity: 0.8; margin-bottom: 2px;">當前選取</div><div style="font-size: 13px; font-weight: 800;">' + escapeHtml(item.name || '圖形') + '</div></div>';
-      html += renderMultiSelectInfo() + alignmentTools();
+      html += renderMultiSelectInfo() + alignmentTools() + backgroundInspectorFields();
       
       html += '<div class="section"><h2 class="panel-title">📍 位置與尺寸</h2><div class="form-grid">';
       html += '<div class="field"><label>X 座標</label><input id="x" type="number" value="' + item.x + '"></div>';
@@ -1813,7 +1813,7 @@
 
       html += '<div class="section"><h2 class="panel-title">🎨 背景與投影</h2>';
       html += '<div class="field full" style="margin-bottom:6px;"><label>背景色 (純色)</label><div class="color-input"><input id="color" type="color" value="' + item.color + '"></div></div>';
-      html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="gradient" ' + (item.gradient ? 'checked' : '') + '> 開啟漸層背景</label></div>';
+      html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="gradient" ' + (item.gradient ? 'checked' : '') + '> 開啟漸層背景（會取代貼圖）</label></div>';
       
       if (item.gradient) {
         html += '<div class="form-grid">';
@@ -1871,6 +1871,7 @@
       item.borderColor = document.querySelector('#borderColor')?.value ?? item.borderColor;
       item.color = document.querySelector('#color')?.value ?? item.color;
       item.gradient = document.querySelector('#gradient')?.checked ?? item.gradient;
+      if(event?.target?.id==='gradient' && item.gradient){delete item.backgroundImage;delete item.backgroundSize;delete item.backgroundPosition;delete item.backgroundRepeat;}
       item.gStart = document.querySelector('#gStart')?.value ?? item.gStart;
       item.gEnd = document.querySelector('#gEnd')?.value ?? item.gEnd;
       item.gAngle = document.querySelector('#gAngle') ? Number(document.querySelector('#gAngle').value) : item.gAngle;
@@ -1903,7 +1904,7 @@
       availableFonts.forEach(f => { fontOptions += '<option value="' + f + '" ' + (state.fontFamily === f ? 'selected' : '') + '>' + f + '</option>'; });
       
       let html = '<div class="section" style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent); color: var(--accent);"><div style="font-size: 10px; font-weight: bold; opacity: 0.8; margin-bottom: 2px;">當前選取 (匯入)</div><div style="font-size: 13px; font-weight: 800;">' + escapeHtml(importedName(importedSelected)) + '</div></div>';
-      html += renderMultiSelectInfo() + alignmentTools();
+      html += renderMultiSelectInfo() + alignmentTools() + backgroundInspectorFields();
       
       html += '<div class="section"><h2 class="panel-title">📍 位置與尺寸</h2><div class="form-grid">';
       html += '<div class="field"><label>向右移 (px)</label><input id="ix" type="number" value="' + state.dx + '"></div>';
@@ -1921,7 +1922,7 @@
 
       html += '<div class="section"><h2 class="panel-title">🎨 背景與投影</h2>';
       html += '<div class="field full" style="margin-bottom:6px;"><label>背景色 (純色)</label><div class="color-input"><input id="icolor" type="color" value="' + color + '"></div></div>';
-      html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="igradient" ' + (state.gradient ? 'checked' : '') + '> 開啟漸層背景</label></div>';
+      html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="igradient" ' + (state.gradient ? 'checked' : '') + '> 開啟漸層背景（會取代貼圖）</label></div>';
       
       if (state.gradient) {
         html += '<div class="form-grid">';
@@ -1961,7 +1962,7 @@
     }
 
     inspector.addEventListener('input', e => {
-       if(updateBatchAppearance(e,false))return;
+       if(updateBackgroundField(e,false) || updateBatchAppearance(e,false))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
               if (e.target.id.startsWith('itext') || e.target.id.startsWith('ifont') || e.target.id.startsWith('ishadowC')) { updateImportedText(e, false); } else { updateImported(e, false); }
@@ -1970,7 +1971,7 @@
     });
     
     inspector.addEventListener('change', e => {
-       if(updateBatchAppearance(e,true))return;
+       if(updateBackgroundField(e,true) || updateBatchAppearance(e,true))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
               if (e.target.id.startsWith('itext') || e.target.id.startsWith('ifont') || e.target.id.startsWith('ishadowC')) { updateImportedText(e, true); } else { updateImported(e, true); }
@@ -1980,6 +1981,8 @@
     });
     
     inspector.addEventListener('click', e => {
+        const backgroundButton=e.target.closest('[data-bg-action]');
+        if(backgroundButton){backgroundAction(backgroundButton.dataset.bgAction);return;}
         const btn = e.target.closest('[data-align]');
         if (btn) alignSelected(btn.dataset.align);
         const listBtn = e.target.closest('.deep-inspect-item');
@@ -2007,10 +2010,10 @@
     document.querySelector('#fit-view').addEventListener('click',()=>fitView());
 
     document.querySelector('#edit-mode').addEventListener('click', () => { abortPointerGesture(); boxSelectMode=false; editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
-    document.querySelector('#toggle-viewport').addEventListener('click', () => { abortPointerGesture(); savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
+    document.querySelector('#toggle-viewport').addEventListener('click', () => { abortPointerGesture(); cancelBackgroundUpload(); savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
-      importRequestSequence++;
+      cancelBackgroundUpload();importRequestSequence++;
       cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
       importedFrame = null; importedSelected = null; importedSelectedElements = []; importedLayers = []; sourceGeneration++;
@@ -2093,6 +2096,7 @@
   <script src="folder-import.js"></script>
   <script src="workspace-state.js"></script>
   <script src="pointer-tools.js"></script>
+  <script src="background-image.js"></script>
   <script src="canvas.js"></script>
   <script src="project-io.js"></script>
   <script src="appearance.js"></script>

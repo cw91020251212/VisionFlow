@@ -99,6 +99,7 @@ function readDraftSnapshot(value) {
   const s = JSON.parse(value);
   if (!s || ![1,2].includes(s.version) || !Array.isArray(s.items))
     throw new Error('不支援或損壞的草稿版本；原始草稿仍保留，可下載備份。');
+  s.items.forEach(validateCanvasBackground); // Also validate optional texture fields in legacy v1 drafts.
   if(s.importReport !== undefined)validateImportReport(s.importReport);
   if (s.version === 1) {
     s.toolPreferences = {...DEFAULT_TOOL_PREFERENCES};

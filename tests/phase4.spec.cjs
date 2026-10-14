@@ -79,10 +79,10 @@ async function fixtureServer() {
  const state={version:'v1',missing:false};
  const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost'), name=url.pathname.split('/').at(-1)||'index.html';
-  if(!url.pathname.startsWith('/project/') || !['index.html','sw.js','appearance.js','folder-import.js','canvas.js','project-io.js','workspace-state.js','pointer-tools.js','delivery.js','manifest.json','icon.png','icon-192.png','icon-512.png','apple-touch-icon.png'].includes(name)){res.writeHead(404);res.end();return;}
+  if(!url.pathname.startsWith('/project/') || !['index.html','sw.js','appearance.js','folder-import.js','canvas.js','project-io.js','workspace-state.js','pointer-tools.js','delivery.js','background-image.js','manifest.json','icon.png','icon-192.png','icon-512.png','apple-touch-icon.png'].includes(name)){res.writeHead(404);res.end();return;}
   if(state.missing && name==='delivery.js'){res.writeHead(404);res.end();return;}
   let body=fs.readFileSync(path.join(root,name));
-  if(name==='sw.js')body=Buffer.from(body.toString().replace("'phase4-delivery-v1'",JSON.stringify(state.version)));
+  if(name==='sw.js')body=Buffer.from(body.toString().replace(/const APP_VERSION = '[^']+';/,`const APP_VERSION = ${JSON.stringify(state.version)};`));
   if(name==='index.html')body=Buffer.from(body.toString().replace('</head>',`<meta name="fixture-version" content="${state.version}"></head>`));
   if(name==='delivery.js')body=Buffer.from(`globalThis.fixtureShellVersion=${JSON.stringify(state.version)};\n`+body.toString());
   res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript':name.endsWith('.html')?'text/html':name.endsWith('.json')?'application/json':'image/png','Cache-Control':'no-store'});res.end(body);
@@ -93,7 +93,7 @@ async function offlineReady(page,url){await page.goto(url);await page.evaluate((
 test('complete scoped cache works offline, retains draft, and never stores imported HTML or outside origin paths',async({page,context})=>{
  const server=await fixtureServer();try{
   await offlineReady(page,server.url);await page.evaluate(()=>{addShape('rect');performQuickSave();});
-  const keys=await page.evaluate(async()=>{const names=await caches.keys();const cache=await caches.open(names.find(n=>n.includes('visionflow-app:')));return(await cache.keys()).map(r=>r.url);});expect(keys).toHaveLength(13);expect(keys.every(k=>k.startsWith(server.url))).toBe(true);expect(keys.some(k=>k.includes('delivery.js'))).toBe(true);expect(keys.some(k=>k.includes('draft'))).toBe(false);
+  const keys=await page.evaluate(async()=>{const names=await caches.keys();const cache=await caches.open(names.find(n=>n.includes('visionflow-app:')));return(await cache.keys()).map(r=>r.url);});expect(keys).toHaveLength(14);expect(keys.every(k=>k.startsWith(server.url))).toBe(true);expect(keys.some(k=>k.includes('delivery.js'))).toBe(true);expect(keys.some(k=>k.includes('draft'))).toBe(false);
   await context.setOffline(true);await page.reload();await page.waitForFunction(()=>items.length===1);expect(await page.evaluate(()=>fixtureShellVersion)).toBe('v1');await expect(page.locator('#vf-offline-state')).toContainText('離線');
  }finally{await context.setOffline(false);await page.goto('about:blank');await server.close();}
 });
