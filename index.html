@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-HK">
 <head>
-  <meta name="visionflow-app-version" content="maintenance-controls-v2">
+  <meta name="visionflow-app-version" content="toolbar-scroll-v1">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionFlow | 專業網頁視覺設計</title>
@@ -32,9 +32,17 @@
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(53, 109, 243, .25); outline-offset: 2px; }
     
-    .app { width: 100%; height: 100dvh; display: grid; grid-template-rows: 48px minmax(0, 1fr) 28px; }
-    .main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 40; position: relative; overflow-x: auto; scrollbar-width: none; }
+    .app { width: 100%; height: 100dvh; display: grid; grid-template-rows: 48px 14px minmax(0, 1fr) 28px; }
+    .main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 40; position: relative; overflow-x: auto; scrollbar-width: none; cursor: grab; }
     .main-toolbar::-webkit-scrollbar { display: none; }
+    .main-toolbar.toolbar-dragging, .main-toolbar.toolbar-dragging * { cursor: grabbing !important; user-select: none !important; }
+    .main-toolbar .brand { cursor: default; }
+    .toolbar-scrollbar { position: relative; height: 14px; overflow: hidden; background: #eef1f5; border-bottom: 1px solid #d9dee7; touch-action: none; user-select: none; cursor: pointer; }
+    .toolbar-scrollbar:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .toolbar-scrollbar-track { position: absolute; left: 8px; right: 8px; top: 5px; height: 4px; border-radius: 999px; background: #d4dbe5; }
+    .toolbar-scrollbar-thumb { position: absolute; top: -4px; left: 0; height: 12px; min-width: 36px; border: 1px solid #fff; border-radius: 999px; background: #8492a6; box-shadow: 0 0 0 1px rgba(23,32,42,.12); cursor: grab; }
+    .toolbar-scrollbar-thumb:hover { background: var(--accent); }
+    .toolbar-scrollbar:active .toolbar-scrollbar-thumb { background: var(--accent); }
     
     .brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; margin-right: 6px; }
     .brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; color: #fff; background: var(--accent); box-shadow: 0 4px 10px rgba(53, 109, 243, .28); }
@@ -73,7 +81,7 @@
     .workspace.left-closed .sidebar { transform: translateX(-105%); opacity: 0; pointer-events: none; overflow: hidden; }
     .workspace.right-closed .inspector { transform: translateX(105%); opacity: 0; pointer-events: none; overflow: hidden; }
     
-    .app.focus-mode { grid-template-rows: 48px minmax(0, 1fr) 0px; } 
+    .app.focus-mode { grid-template-rows: 48px 14px minmax(0, 1fr) 0px; }
     .app.focus-mode .footer { display: none !important; }
     #focus-exit { display: none; }
     .app.focus-mode #focus-exit { display: inline-flex; }
@@ -222,7 +230,7 @@
     
     @media (max-width: 700px) { 
       body { overflow: hidden; } 
-      .app { grid-template-rows: 48px minmax(0, 1fr) auto; } 
+      .app { grid-template-rows: 48px 14px minmax(0, 1fr) auto; }
       .workspace, .workspace.left-closed, .workspace.right-closed, .workspace.left-closed.right-closed { display: block; } 
       .canvas-area { position: absolute; inset: 0; width: 100%; height: 100%; } 
       .sidebar, .inspector { position: absolute; top: 0; bottom: 0; z-index: 30; width: min(var(--sidebar-width), 88vw); } 
@@ -254,7 +262,7 @@
 </head>
 <body>
   <div class="app">
-    <header class="main-toolbar">
+    <header class="main-toolbar" id="main-toolbar">
       <div class="toolbar-group">
         <div class="brand"><div class="brand-mark"><img src="icon.png" alt="V" style="width: 100%; height: 100%; border-radius: 4px; object-fit: cover;" onerror="this.style.display='none'"></div><span>VisionFlow</span></div>
         <div class="toolbar-divider"></div>
@@ -306,6 +314,9 @@
         <button class="button" id="vf-share" aria-haspopup="dialog">分享</button>
       </div>
     </header>
+    <div id="toolbar-scrollbar" class="toolbar-scrollbar" role="scrollbar" aria-label="工具栏水平滚动条" aria-controls="main-toolbar" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="0" hidden>
+      <div class="toolbar-scrollbar-track"><div class="toolbar-scrollbar-thumb"></div></div>
+    </div>
     
     <main class="workspace left-closed right-closed">
       <aside class="sidebar" id="project-sidebar">
@@ -2102,15 +2113,16 @@
 
 
   </script>
-  <script src="folder-import.js?v=maintenance-controls-v2"></script>
-  <script src="workspace-state.js?v=maintenance-controls-v2"></script>
-  <script src="pointer-tools.js?v=maintenance-controls-v2"></script>
-  <script src="background-image.js?v=maintenance-controls-v2"></script>
-  <script src="canvas.js?v=maintenance-controls-v2"></script>
-  <script src="project-io.js?v=maintenance-controls-v2"></script>
-  <script src="appearance.js?v=maintenance-controls-v2"></script>
-  <script src="maintenance.js?v=maintenance-controls-v2"></script>
-  <script src="delivery.js?v=maintenance-controls-v2"></script>
+  <script src="folder-import.js?v=toolbar-scroll-v1"></script>
+  <script src="workspace-state.js?v=toolbar-scroll-v1"></script>
+  <script src="pointer-tools.js?v=toolbar-scroll-v1"></script>
+  <script src="background-image.js?v=toolbar-scroll-v1"></script>
+  <script src="canvas.js?v=toolbar-scroll-v1"></script>
+  <script src="project-io.js?v=toolbar-scroll-v1"></script>
+  <script src="appearance.js?v=toolbar-scroll-v1"></script>
+  <script src="maintenance.js?v=toolbar-scroll-v1"></script>
+  <script src="delivery.js?v=toolbar-scroll-v1"></script>
+  <script src="toolbar-scroll.js?v=toolbar-scroll-v1"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
