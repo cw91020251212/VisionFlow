@@ -15,6 +15,14 @@ let pendingGuideTargets = [];
 let appearanceAutosaveTimer;
 let sourceGeneration = 0;
 const previewInlineCache = new Map();
+let pageSessions = {};
+let folderPagePaths = [];
+let folderSetKey = '';
+const sourceFileSets = new Map(); // Live File references only; never serialized into localStorage.
+let exportedAppearanceFingerprint = null;
+let initialAppearanceFingerprint = null;
+let draftRecoveryBlocked = false;
+let importRequestSequence = 0;
 const DRAFT_KEY = 'visionflow-appearance-draft-v1';
 const PRESERVE = ['text', 'links', 'image-source', 'click-handler', 'form-behavior', 'data-logic', 'program-state'];
 const VALID_STATES = ['default', 'hover', 'focus', 'disabled', 'loading'];
@@ -317,6 +325,7 @@ function appearanceInspectorFields() {
 function collectAppearanceData() {
   return {
     format:'visionflow-appearance-v1', tool:'VisionFlow', source:structuredClone(appearanceSource),
+    origin:structuredClone(appearanceOrigin()), integrationPagePath:appearanceSource.page,
     pages:[...new Set([appearanceSource.page,...Object.values(appearanceRecords).map(r=>r.page)])].map(page=>({page})),
     viewport:{desktop:{width:1280,height:720},mobile:{width:375,height:812}},
     changes:structuredClone(Object.values(appearanceRecords).filter(r=>Object.keys(r.styles).length)),
@@ -326,19 +335,31 @@ function collectAppearanceData() {
 }
 function validateAppearanceData(data) {
   if (data?.format !== 'visionflow-appearance-v1' || !Array.isArray(data.changes) || !data.source || typeof data.source.page !== 'string') throw new Error('不是支援的 VisionFlow 外觀檔案。');
+  const origin = validateAppearanceOrigin(data.origin || appearanceOrigin(data.source));
+  if (data.changes.length > 5000 || data.source.page.length > 4096 ||
+      (data.integrationPagePath != null && data.integrationPagePath !== data.source.page) ||
+      origin.entryPath !== data.source.htmlFile || (origin.sourceHash || null) !== (data.source.sourceHash || null))
+    throw new Error('JSON 的來源檔案／頁面／校驗值與整合路徑資料不一致。');
+  if (data.userNotes != null && (typeof data.userNotes !== 'string' || data.userNotes.length > 100000)) throw new Error('外觀說明格式無效。');
   for (const rec of data.changes) {
     if (!rec.target || !safeSelector(rec.target.selector) || !['desktop','mobile'].includes(rec.viewport) || !VALID_STATES.includes(rec.state) || !['this-element','all-matching'].includes(rec.scope) || typeof rec.page !== 'string' || !rec.styles || Array.isArray(rec.styles)) throw new Error('外觀修改的元素／視口／狀態／範圍資料不完整。');
+    if (rec.page !== data.source.page) throw new Error('JSON 的來源檔案／頁面／校驗值不一致；外觀紀錄必須屬於目前入口。');
     if (rec.scope === 'all-matching' && !safeSelector(rec.matchingSelector)) throw new Error('同類元素 selector 不完整。');
     if (rec.scope === 'all-matching' && 'translate' in rec.styles) throw new Error('同類元素位置不能共用固定 translate，請拆分成逐元素布局意圖。');
     for (const [k,v] of Object.entries(rec.styles)) if (!STYLE_ALLOWLIST.has(k) || typeof v !== 'string' || /[;{}<>]/.test(v) || /url\s*\(|expression\s*\(/i.test(v)) throw new Error('外觀檔案含有不支援的 CSS 屬性或值。');
   }
   return data;
 }
-function importAppearanceData(data) {
+function importAppearanceData(data, verifiedOrigin = null) {
   validateAppearanceData(data);
   appearanceRecords = {};
   for (const rec of data.changes) appearanceRecords[JSON.stringify([rec.page,rec.target.selector,rec.viewport,rec.state])] = structuredClone(rec);
   appearanceSource = structuredClone(data.source); appearanceNotes = data.userNotes || '';
+  appearanceSource.origin = structuredClone(data.origin || appearanceOrigin(data.source));
+  if (verifiedOrigin?.entryPath === appearanceSource.origin.entryPath && !appearanceSource.origin.sourceHash && verifiedOrigin.sourceHash) {
+    appearanceSource.sourceHash = verifiedOrigin.sourceHash;
+    appearanceSource.origin.sourceHash = verifiedOrigin.sourceHash;
+  }
 }
 function stripActiveContent(doc) {
   doc.querySelectorAll('script:not([type="application/json"]), iframe, object, embed, meta[http-equiv="refresh"]').forEach(n=>n.remove());
@@ -394,14 +415,16 @@ function buildAppearanceHtml() {
 }
 function downloadAppearance(kind) {
   try {
-    if (!importedMode) throw new Error('請先匯入網頁檔案。');
-    const content = kind === 'json' ? JSON.stringify(collectAppearanceData(),null,2) : buildAppearanceHtml();
-    const blob = new Blob([content],{type:kind === 'json' ? 'application/json;charset=utf-8' : 'text/html;charset=utf-8'});
-    const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href=url; a.download=`visionflow-appearance.${kind}`; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
-    setStatus('已匯出外觀參考。請連同原始工程及補充說明交給 AI，不要用它取代原工程。');
+    if (!['html', 'json'].includes(kind)) throw new Error('不支援的匯出格式。');
+    const data = importedMode ? collectAppearanceData() : collectCanvasData();
+    const content = kind === 'json' ? JSON.stringify(data,null,2) : importedMode ? buildAppearanceHtml() : buildCanvasHtml();
+    downloadTextFile(content, `visionflow-${importedMode ? 'appearance' : 'canvas'}.${kind}`, kind);
+    if (importedMode) exportedAppearanceFingerprint = appearanceFingerprint();
+    scheduleAppearanceSave();
+    setStatus(importedMode ? '已匯出外觀參考；目前修改已備份，可切換入口。請連同原始工程交給 AI，不要取代原工程。' : '已匯出畫布設計。HTML 是純外觀參考；HTML／JSON 可重新匯入繼續編輯。');
   } catch (e) { sysAlert(e.message); }
 }
-function snapshot() {
+function snapshot(includePageSessions = true) {
   const targets = importedSelectedElements.filter(el=>el.isConnected).map(el=>ensureImportedState(el).target);
   const groups = importedLayers.filter(l=>importedGroupIds.has(l.element)).map(l=>({target:ensureImportedState(l.element).target,group:importedGroupIds.get(l.element)}));
   let staticPreviewHtml = '';
@@ -411,11 +434,20 @@ function snapshot() {
     importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets:importedGuideTargets.filter(el=>el.isConnected).map(el=>ensureImportedState(el).target),
     activeTheme, importedMode, importedSourceHtml, importedHtml, importedPreparedHtml, staticPreviewHtml, importedDirty, editing, zoom, guideMode, guideArmed,
     eraserMode, panMode, measureMode, viewportMode, isPositionLocked, appearanceRecords, appearanceSource, appearanceNotes, appearanceState,
-    selectedTargets:targets, groups, importedGroupSeq
+    selectedTargets:targets, groups, importedGroupSeq,
+    folderPagePaths, folderSetKey, exportedAppearanceFingerprint, initialAppearanceFingerprint,
+    ...(includePageSessions ? {pageSessions} : {})
   });
 }
 function restoreSnapshot(value, fromDraft = false) {
   const s = JSON.parse(value), sameDocument = importedMode && s.importedMode && s.importedSourceHtml === importedSourceHtml && s.importedHtml === importedHtml;
+  if (s.version !== 1 || !Array.isArray(s.items)) throw new Error('不支援或損壞的草稿版本；原始草稿仍保留，可下載備份。');
+  importRequestSequence++;
+  if (s.pageSessions !== undefined) pageSessions = s.pageSessions || {};
+  folderPagePaths = s.folderPagePaths || []; folderSetKey = s.folderSetKey || '';
+  folderFiles = sourceFileSets.get(folderSetKey) || [];
+  exportedAppearanceFingerprint = s.exportedAppearanceFingerprint ?? null;
+  initialAppearanceFingerprint = s.initialAppearanceFingerprint ?? null;
   items=s.items||[]; selectedId=s.selectedId; selectedIds=s.selectedIds||[];
   manualGuides=s.manualGuides||[]; hiddenDemoGuideKeys=s.hiddenDemoGuideKeys||[]; demoGuideTargets=s.demoGuideTargets||[];
   importedManualGuides=s.importedManualGuides||[]; hiddenImportedGuideKeys=s.hiddenImportedGuideKeys||[];
@@ -464,6 +496,7 @@ function scheduleAppearanceSave() {
 }
 function performQuickSave(silent = false) {
   try {
+    if (draftRecoveryBlocked) { setStatus('原草稿無法恢復，已停止自動覆寫；請先下載草稿備份。'); return; }
     localStorage.setItem(DRAFT_KEY,snapshot()); importedDirty=false;
     if (!silent) setStatus('外觀資料與原始來源已存入此瀏覽器。刷新可恢復；重要修改請另行匯出。');
   } catch (e) { setStatus('草稿儲存失敗（容量或瀏覽器權限）；請立即匯出外觀 HTML／JSON。'); }
@@ -473,6 +506,9 @@ function syncAppearanceControls() {
   document.getElementById('vf-page-path').value=appearanceSource.page||'/';
   document.getElementById('vf-user-notes').value=appearanceNotes;
   document.getElementById('vf-edit-state').value=appearanceState;
+  document.getElementById('export').textContent = importedMode ? '匯出外觀 HTML' : '匯出畫布 HTML';
+  document.getElementById('export-json').textContent = importedMode ? '匯出外觀 JSON' : '匯出畫布 JSON';
+  refreshEntryPagesControl();
 }
 function previewSource(html) {
   const doc=new DOMParser().parseFromString(html,'text/html'); cleanPreviewDocument(doc);
@@ -483,26 +519,61 @@ function previewSource(html) {
   if (!trustedScripts) stripActiveContent(doc);
   return '<!doctype html>\n'+doc.documentElement.outerHTML;
 }
-async function loadSelectedFiles(files, entryPath) {
+async function loadSelectedFiles(files, entryPath, switchingPage = false) {
+  const request = ++importRequestSequence;
   try {
+    if (draftRecoveryBlocked) throw new Error('原草稿仍受保護，請先下載草稿備份並在另一瀏覽器工作區開啟新專案。');
+    if (switchingPage && hasUnexportedAppearanceChanges()) {
+      refreshEntryPagesControl(); throw new Error('切換入口前請先匯出目前頁面的外觀檔案；匯出後即可切換，修改會保留。');
+    }
     const json=files.find(f=>/\.json$/i.test(f.name) && !f.webkitRelativePath);
     if (json && !files.some(f=>/\.html?$/i.test(f.name))) {
+      if (json.size > 25000000) throw new Error('專案 JSON 超過 25 MB。');
+      const raw = JSON.parse(await json.text());
+      if (request !== importRequestSequence) return;
+      if (raw?.format === CANVAS_FORMAT) { importCanvasData(raw); return; }
+      const data=validateAppearanceData(raw);
       if (!importedMode) throw new Error('請先匯入對應原始 HTML，然後再匯入外觀 JSON。');
-      const data=validateAppearanceData(JSON.parse(await json.text()));
-      if (data.source.htmlFile !== appearanceSource.htmlFile || data.source.page !== appearanceSource.page || (data.source.sourceHash && appearanceSource.sourceHash && data.source.sourceHash !== appearanceSource.sourceHash)) throw new Error('JSON 的來源檔案／頁面／校驗值與目前頁面不符；請先匯入正確的原始 HTML。');
-      savePoint(); importAppearanceData(data); refreshAppearanceStyles(); syncAppearanceControls(); scheduleAppearanceSave(); setStatus('已載入外觀 JSON；原始 HTML 未被覆寫。'); return;
+      requireMatchingAppearanceSource(data);
+      const verifiedOrigin=structuredClone(appearanceOrigin());
+      savePoint(); importAppearanceData(data,verifiedOrigin); exportedAppearanceFingerprint=null;
+      importedLayers.forEach(l=>importedState.delete(l.element));
+      refreshAppearanceStyles(); importedSelectedElements.forEach(syncStateContext); renderImportedInspector();
+      syncAppearanceControls(); scheduleAppearanceSave(); setStatus('已載入外觀 JSON；整合路徑已保留，原始 HTML 未被覆寫。'); return;
     }
     if (!files.some(f=>/\.html?$/i.test(f.name))) throw new Error('沒有找到 HTML 入口頁；請選擇 .html 或包含入口頁的資料夾。');
     const prepared=await VFFolder.prepare(files,entryPath);
     const entryFile=files.find(f=>(f.webkitRelativePath||f.name)===prepared.entryPath || (f.webkitRelativePath||f.name).endsWith('/'+prepared.entryPath));
     if (!entryFile) throw new Error('找不到所選入口的原始檔案。');
     const original=await entryFile.text(), doc=new DOMParser().parseFromString(prepared.html,'text/html');
+    if (request !== importRequestSequence) return;
+    const canvasMetadata = doc.getElementById('visionflow-canvas-data');
+    if (canvasMetadata) { importCanvasData(JSON.parse(canvasMetadata.textContent)); return; }
     const embedded=doc.getElementById('visionflow-appearance-data');
     let data=null; if (embedded) data=validateAppearanceData(JSON.parse(embedded.textContent));
     const hash=globalThis.crypto?.subtle ? [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(original)))].map(n=>n.toString(16).padStart(2,'0')).join('') : null;
-    savePoint(); sourceGeneration++; importedMode=true; importedSourceHtml=original; importedPreparedHtml=prepared.html; importedHtml=prepared.html;
-    appearanceRecords={}; appearanceSource={htmlFile:prepared.entryPath,projectName:'',page:'/'+prepared.entryPath,sourceHash:hash}; appearanceNotes='';
+    if (request !== importRequestSequence) return;
+    if (switchingPage && hasUnexportedAppearanceChanges()) throw new Error('載入期間目前頁又有修改，請先重新匯出；原畫布仍保留。');
+    const origin={entryPath:prepared.entryPath, sourceHash:hash, schemaVersion:1};
+    const paths=prepared.pages.map(p=>p.path);
+    const reselectedCurrentSource = importedMode && origin.entryPath===appearanceOrigin().entryPath && hash && hash===appearanceOrigin().sourceHash && JSON.stringify(paths)===JSON.stringify(folderPagePaths);
+    const reselectedCachedSource = importedMode && !folderFiles.length && hash && JSON.stringify(paths)===JSON.stringify(folderPagePaths) && !!pageSessions[pageSessionKey(origin)];
+    const keepWorkspace = switchingPage || reselectedCurrentSource || reselectedCachedSource;
+    savePoint();
+    if (keepWorkspace) {
+      if (importedMode) pageSessions[pageSessionKey()] = snapshot(false);
+    } else { pageSessions={}; folderSetKey=globalThis.crypto?.randomUUID?.() || `files-${Date.now()}-${sourceGeneration}`; }
+    sourceFileSets.set(folderSetKey,files); folderFiles=files; folderPagePaths=paths;
+    const cached=keepWorkspace && pageSessions[pageSessionKey(origin)];
+    if (cached) {
+      restoreSnapshot(cached); syncAppearanceControls(); scheduleAppearanceSave();
+      setStatus('已切換入口，先前的外觀修改仍保留。'); return;
+    }
+    sourceGeneration++; importedMode=true; importedSourceHtml=original; importedPreparedHtml=prepared.html; importedHtml=prepared.html;
+    appearanceRecords={}; appearanceSource={htmlFile:prepared.entryPath,projectName:'',page:'/'+prepared.entryPath,sourceHash:hash,origin}; appearanceNotes='';
+    exportedAppearanceFingerprint=null; appearanceState='default';
     if (data) importAppearanceData(data);
+    initialAppearanceFingerprint=appearanceFingerprint();
     folderFiles=files; importedDirty=false; importedFrame=null; importedSelected=null; importedSelectedElements=[]; importedLayers=[];
     importedGroupIds=new WeakMap(); importedGroupSeq=0; importedManualGuides=[]; importedGuideTargets=[]; hiddenImportedGuideKeys=[];
     pendingSelection=[]; pendingGroups=[]; pendingGuideTargets=[]; editing=true; isTyping=false; isIframeLoaded=false;
@@ -514,7 +585,7 @@ async function loadSelectedFiles(files, entryPath) {
     setStatus(message);
     const warnings=prepared.warnings.filter(w=>!w.startsWith('Disabled '));
     if (warnings.length) sysAlert('匯入限制／缺少資源：\n'+warnings.join('\n'));
-  } catch(e) { sysAlert('匯入失敗：'+e.message); setStatus('匯入失敗，原畫布未被替換。'); }
+  } catch(e) { if (request !== importRequestSequence) return; refreshEntryPagesControl(); sysAlert('匯入失敗：'+e.message); setStatus('匯入失敗，原畫布未被替換。'); }
 }
 function initializeAppearanceEditor() {
   document.getElementById('export-json').addEventListener('click',()=>downloadAppearance('json'));
@@ -530,8 +601,9 @@ function initializeAppearanceEditor() {
     refreshAppearanceStyles(); scheduleAppearanceSave();
   });
   document.getElementById('vf-entry-page').addEventListener('change',e=>{
-    if (Object.values(appearanceRecords).some(r=>Object.keys(r.styles).length)) { e.target.value=appearanceSource.htmlFile; sysAlert('切換入口前請匯出目前頁面的外觀檔案。此版本每次編輯一頁，避免靜默丟失修改。'); return; }
-    loadSelectedFiles(folderFiles,e.target.value);
+    const path=e.target.value;
+    if (hasUnexportedAppearanceChanges()) { refreshEntryPagesControl(); sysAlert('切換入口前請先匯出目前頁面的外觀檔案；匯出後即可切換，修改會保留。'); return; }
+    loadSelectedFiles(folderFiles,path,true);
   });
   document.getElementById('vf-trusted-scripts').addEventListener('change',e=>{
     trustedScripts=e.target.checked;
@@ -543,8 +615,10 @@ function initializeAppearanceEditor() {
   window.addEventListener('beforeunload',()=>performQuickSave(true));
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden') performQuickSave(true);});
   document.querySelector('.main-toolbar').addEventListener('click',()=>scheduleAppearanceSave());
+  document.getElementById('vf-backup-draft').addEventListener('click',downloadDraftBackup);
+  syncAppearanceControls();
   try {
     const draft=localStorage.getItem(DRAFT_KEY);
-    if(draft) { restoreSnapshot(draft,true); setStatus('已從此瀏覽器恢復靜態外觀草稿。脚本停用；如需功能預覽，請重新啟用可信原始程式。'); }
-  } catch(e) { setStatus('無法恢復草稿：'+e.message+'。請重新匯入已匯出的外觀 HTML。'); }
+    if(draft !== null) { restoreSnapshot(draft,true); setStatus('已從此瀏覽器恢復靜態外觀草稿。脚本停用；如需功能預覽，請重新啟用可信原始程式。'); }
+  } catch(e) { draftRecoveryBlocked=true; clearTimeout(appearanceAutosaveTimer); setStatus('無法恢復草稿：'+e.message+'。已停止自動覆寫，請用「備份草稿」下載原始資料。'); }
 }

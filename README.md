@@ -2,11 +2,11 @@
 
 VisionFlow 是**純前端外觀參考編輯器**。你可以匯入 HTML、調整界面外觀，再匯出給 AI／開發者整合的外觀檔案。它不會自動修改原始工程，不內建 AI 源碼整合，不保證被匯入程式的業務功能。
 
-線上入口：[GitHub Pages](https://cw91020251212.github.io/VisionFlow/)。下載倉庫後也可直接開啟 `index.html`；正常使用不需要 Node、構建流程或後端。`appearance.js`、`folder-import.js` 需與 HTML 放在一起。
+線上入口：[GitHub Pages](https://cw91020251212.github.io/VisionFlow/)。第一批修復先留在 `fix/phase1-export-roundtrip` 分支，並未替换此線上版本。下載修復分支後也可直接開啟 `index.html`；正常使用不需要 Node、構建流程或後端。`appearance.js`、`folder-import.js`、`canvas.js`、`project-io.js` 需與 HTML 放在一起。
 
 ## 使用方式
 
-1. 點左上「☰」開啟專案面板，匯入原始 HTML 或網站資料夾。資料夾有多個 HTML 時可選擇入口，但每次只編輯一頁；有修改時必須先匯出，才可切換入口。
+1. 點左上「☰」開啟專案面板，匯入原始 HTML 或網站資料夾。資料夾有多個 HTML 時可選擇入口，每次只編輯一頁；有未匯出修改時必須先匯出，成功後可切換，切回會保留先前修改。之後再修改要重新匯出。
 2. 點「⚙」顯示屬性面板，使用畫布拖動、縮放、屬性欄位、圖層、群組、參考線、吸附、桌面／手機視口和撤銷／重做。
 3. 在專案面板補充原工程名稱、頁面路徑及整合說明。切換 Default、Hover、Focus、Disabled 或 Loading 外觀狀態。編輯器模擬所選狀態；匯出的預覽按真正的 CSS 偽類／狀態屬性顯示。
 4. 如果元素沒有穩定 ID／data 屬性，填寫名稱／父級區域。欲套用同類組件，先填 CSS selector，再選「所有匹配元素」；位移只支援「僅此元素」，不會覆蓋其他实例的原位移。
@@ -20,6 +20,11 @@ VisionFlow 是**純前端外觀參考編輯器**。你可以匯入 HTML、調整
 | --- | --- | --- |
 | `visionflow-appearance.html` | 靜態外觀、需要的外觀 CSS，以及 `script[type="application/json"]#visionflow-appearance-data` | 視覺對照、重新匯入繼續編輯；不含可執行業務脚本 |
 | `visionflow-appearance.json` | `format: visionflow-appearance-v1`、來源、頁面、視口、修改、保留事項與補充說明 | AI／開發者按明确修改整合原工程 |
+| `visionflow-canvas.html` | 空白畫布的圖形／文字及內嵌 `visionflow-canvas-v1` JSON | 純表面設計、可回讀；不帶工具層或可執行腳本 |
+| `visionflow-canvas.json` | 畫布視口、主題背景、位置、尺寸、群組及圖層樣式 | 重新編輯畫布或交給 AI；不是原程式的 selector 修改檔 |
+| `visionflow-draft-backup.json` | 本機草稿的原始位元內容 | 復原排錯用；不是日常匯入的畫布／外觀 JSON |
+
+不匯入原網頁時，可從「新增圖形」建立空白設計。兩個匯出按鈕會自動顯示「匯出畫布」，HTML 與 JSON 均可透過原匯入入口重新開啟。畫布視口是固定 1280×720 或 375×812，不自動產生響應式布局；最多 1000 個圖層，JSON 上限 25 MB。
 
 只有明確修改過的 CSS 屬性會進入 `changes[].styles`。每項修改包含 `target`、`page`、`viewport`、`state`、`scope` 與 `preserve`。版本格式可表示多頁修改；本版界面一次編輯一頁，請為各頁保留獨立檔案。來源 SHA-256 為原始入口 HTML 的校驗值，不是整个仓库或内联資源後 HTML 的版本校驗值。
 
@@ -27,11 +32,15 @@ VisionFlow 是**純前端外觀參考編輯器**。你可以匯入 HTML、調整
 
 位移使用 CSS `translate` 保留原 `transform`，並附上父級、相鄰元素、間距、參考矩形和 `preserveResponsiveLayout` 的布局意圖。這些像素是視覺參考，不表示應把原工程改為絕對定位。
 
-匯入獨立 JSON 前須先載入相符的原始 HTML；來源檔名、頁面或可用校驗值不符時會提示，避免套用錯工程。匯入外觀 HTML 時可直接恢復其內嵌修改資料。
+匯入獨立外觀 JSON 前須先載入相符的原始 HTML。新版額外保存 `origin={entryPath,sourceHash,schemaVersion:1}` 和可編輯的 `integrationPagePath`；來源入口或校驗值不符仍拒絕，但填寫 `/login` 等整合路徑不會誤判為換了來源。舊 `visionflow-appearance-v1` 檔案由 `source.htmlFile/sourceHash` 讀取來源識別。沒有校驗值的舊檔只能依入口識別，不能保證檔案內容相同。匯入外觀 HTML 時可直接恢復其內嵌修改資料。
 
 ## 保存和脚本預覽
 
 外觀修改自動存到**目前瀏覽器的 localStorage**，「暫存」可立即保存。草稿包含原始來源、內嵌資源後的來源、可序列化外觀模型、選取識別、群組、參考線、視口、主題和工具狀態，並另存靜態視覺快照。刷新會恢復草稿而不執行原脚本。容量不足或權限不允許會提示，請匯出備份；清除瀏覽器資料、私密模式或改用另一裝置不保證保留草稿。
+
+多入口修改保存於同一草稿的逐頁工作集合，刷新會先恢复目前靜態頁。原本的 `File` 物件只留在記憶體，不寫入 localStorage；要重新切頁需重選原資料夾。重選相符原入口後會恢復已保存的各頁修改。各頁仍需分別匯出，未提供「整個網站一鍵匯出」。容量限制可能使大工程無法暫存，應另行下載每頁檔案。
+
+「備份草稿」下載目前 localStorage 的原始資料，不清除或覆寫它。遇到未知版本或無法恢復的草稿會停止自動覆寫，請先下載備份，再用另一個瀏覽器工作區開啟新專案；本批不提供損壞草稿的自動重設。工具開關、量尺完整恢復、平移和多選等其他已知缺陷仍留待後續批次，不能視為本批已修復。
 
 匯入脚本**預設停用**。如果要觀察自己程式的 JS 生成元素或事件，可勾選「允許可信頁面的脚本預覽」。這不是安全隔離：可信脚本可存取網路及同源編輯器。不要對不可信 HTML 開啟。信任選項不會跨刷新保存，執行時事件、資料請求及狀態不能變成可還原的原工程。匯出會刪除全部原有 script，包括 hydration／業務 JSON，只追加 VisionFlow 自己的非執行外觀 JSON。
 

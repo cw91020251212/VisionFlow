@@ -285,6 +285,7 @@
         <button class="button" id="undo">↶ 復原</button>
         <button class="button" id="redo">↷ 重做</button>
         <button class="button" id="quick-save" style="font-weight:bold; color:#0fa958; border-color:#0fa958; background:#eafcf1;" title="即時儲存目前所有修改，防止切換頁面時遺失">💾 暫存</button>
+        <button class="button" id="vf-backup-draft" title="下載本機草稿原始備份，不清除或覆寫資料">備份草稿</button>
         <button class="button" id="reset">清空畫布</button>
         <button class="button primary" id="export">匯出外觀 HTML</button>
         <button class="button" id="export-json">匯出 JSON</button>
@@ -1117,7 +1118,7 @@
       elementsToKeep.forEach(el => artboard.appendChild(el));
       
       for (const item of items) {
-        const element = document.createElement('div');
+        const element = createCanvasElement(item);
         // 群組選取樣式與普通選取區別
         const isSelected = selectedIds.includes(item.id);
         const isGrouped = item.groupId != null;
@@ -1127,29 +1128,6 @@
         selectionOverlay.dataset.vfHelper = 'selection';
         Object.assign(selectionOverlay.style, {left:`${item.x}px`,top:`${item.y}px`,width:`${item.w}px`,height:`${item.h}px`});
         element.dataset.id = item.id;
-        const textShadowStyle = item.textShadow ? `text-shadow: 2px 2px 4px ${item.shadowColor || '#000000'};` : '';
-        const fontStyle = `font-family: ${item.fontFamily||'Inter'}; font-size: ${item.fontSize||16}px; color: ${item.textColor || '#17202a'}; ${textShadowStyle}`;
-        Object.assign(element.style, { 
-          left: `${item.x}px`, top: `${item.y}px`, width: `${item.w}px`, height: `${item.h}px`,
-          border: `${item.borderWidth || 0}px ${item.borderStyle || 'solid'} ${item.borderColor || '#000000'}`,
-          backgroundColor: item.color || 'transparent'
-        });
-
-        if (item.clipPath) { element.style.clipPath = item.clipPath; }
-        if (item.customBorderRadius) {
-            element.style.borderRadius = item.customBorderRadius;
-        } else {
-            element.style.borderRadius = `${item.borderRadius || 0}px`;
-        }
-
-        if (item.gradient) { element.style.background = `linear-gradient(${item.gAngle || 90}deg, ${item.gStart || '#fff'}, ${item.gEnd || '#000'})`; } 
-        if (item.shadow) { element.style.boxShadow = `${item.sX || 0}px ${item.sY || 0}px ${item.sBlur || 0}px ${item.sColor || 'rgba(0,0,0,0.2)'}`; } 
-        
-        if (item.type === 'text') {
-          element.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; text-align:center; ${fontStyle}">${escapeHtml(item.content || '').replace(/\n/g, '<br>')}</div>`;
-        } else {
-          element.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; ${fontStyle}">${escapeHtml(item.content || '')}</div>`;
-        }
         
         // 防拉散保護：如果只有 1 件被選取，先有縮放手柄；如果係群組，只俾佢整體移動，隱藏周圍縮放點
         if (editing && item.id === selectedId && selectedIds.length === 1) {
@@ -2120,9 +2098,11 @@
     document.querySelector('#toggle-viewport').addEventListener('click', () => { savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
+      importRequestSequence++;
       savePoint(); items = structuredClone(initialItems); importedMode = false; selectedId = null; selectedIds = []; editing = false; zoom = 1; zoomLabel.textContent = '100%';
       importedFrame = null; importedSelected = null; importedSelectedElements = []; importedLayers = []; sourceGeneration++;
       appearanceRecords = {}; importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = ''; appearanceNotes = '';
+      pageSessions = {}; folderFiles = []; folderPagePaths = []; folderSetKey = ''; exportedAppearanceFingerprint = null;
       pendingGroups = []; pendingSelection = []; pendingGuideTargets = []; importedGroupIds = new WeakMap();
       syncAppearanceControls();
       manualGuides = []; importedManualGuides = []; demoGuideTargets = []; importedGuideTargets = []; hiddenDemoGuideKeys = []; hiddenImportedGuideKeys = [];
@@ -2210,6 +2190,8 @@
 
   </script>
   <script src="folder-import.js"></script>
+  <script src="canvas.js"></script>
+  <script src="project-io.js"></script>
   <script src="appearance.js"></script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
