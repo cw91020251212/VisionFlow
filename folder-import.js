@@ -10,7 +10,8 @@
  *     html: string,
  *     pages: Array<{ path: string, name: string }>,
  *     entryPath: string,
- *     warnings: string[]
+ *     warnings: string[],
+ *     externalResources: Array<{url:string,kind:string,reference:string}>
  *   }>
  *
  * `pages` lists every discovered HTML file.  Only `entryPath` is read and
@@ -344,6 +345,84 @@
       if (text.charAt(cursor) === ',') cursor += 1;
     }
     return false;
+  }
+
+  function cssReferences(text) {
+    var refs = [];
+    for (var cursor = 0; cursor < text.length;) {
+      if (text.slice(cursor, cursor + 2) === '/*') {
+        var end = text.indexOf('*/', cursor + 2); cursor = end < 0 ? text.length : end + 2; continue;
+      }
+      if (text.charAt(cursor) === '"' || text.charAt(cursor) === "'") {
+        var string = readCssString(text, cursor); cursor = string ? string.end : text.length; continue;
+      }
+      if (text.slice(cursor, cursor + 7).toLowerCase() === '@import' && !/[a-z0-9_-]/i.test(text.charAt(cursor + 7))) {
+        var statementEnd = findCssStatementEnd(text, cursor + 7);
+        if (statementEnd >= 0) {
+          var imported = parseCssImport(text.slice(cursor, statementEnd + 1));
+          if (imported) refs.push({url:imported.target, kind:'CSS @import'});
+          cursor = statementEnd + 1; continue;
+        }
+      }
+      if (text.slice(cursor, cursor + 3).toLowerCase() === 'url' && !/[a-z0-9_-]/i.test(text.charAt(cursor - 1)) && !/[a-z0-9_-]/i.test(text.charAt(cursor + 3))) {
+        var open = skipCssWhitespaceAndComments(text, cursor + 3);
+        if (text.charAt(open) === '(') {
+          var close = findCssCloseParen(text, open);
+          if (close >= 0) { refs.push({url:cssUnquote(text.slice(open + 1, close)),kind:'CSS url()'}); cursor = close + 1; continue; }
+        }
+      }
+      cursor += 1;
+    }
+    return refs;
+  }
+
+  function srcsetCandidates(text) {
+    var urls = [], cursor = 0;
+    while (cursor < text.length) {
+      while (cursor < text.length && /[\s,]/.test(text.charAt(cursor))) cursor += 1;
+      var start = cursor, data = text.slice(cursor, cursor + 5).toLowerCase() === 'data:';
+      while (cursor < text.length && !/\s/.test(text.charAt(cursor)) && (data || text.charAt(cursor) !== ',')) cursor += 1;
+      if (cursor > start) urls.push(text.slice(start, cursor));
+      while (cursor < text.length && text.charAt(cursor) !== ',') cursor += 1;
+      if (text.charAt(cursor) === ',') cursor += 1;
+    }
+    return urls;
+  }
+
+  // Inspect only the prepared DOM. Inlined nested CSS is already present here;
+  // remote stylesheets/scripts are listed, never fetched or recursively crawled.
+  function describe(html, entryPath) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var externalResources = [], seen = new Set(), base = doc.querySelector('base[href]')?.getAttribute('href') || '';
+    var remoteBase = /^(?:https?:)?\/\//i.test(base) ? new URL(base, 'https://visionflow.invalid/').href : '';
+    function add(raw, kind, reference, baseOverride) {
+      raw = String(raw || '').trim();
+      if (!raw || raw.charAt(0) === '#' || /^(?:data|blob|javascript|vbscript|mailto|tel):/i.test(raw)) return;
+      var resolveBase = baseOverride === undefined ? remoteBase : baseOverride;
+      if (!/^(?:https?:)?\/\//i.test(raw) && (!resolveBase || /^[a-z][a-z0-9+.-]*:/i.test(raw))) return;
+      var url; try { url = new URL(raw, resolveBase || 'https://visionflow.invalid/').href; } catch (_) { return; }
+      if (!/^https?:/i.test(url)) return;
+      var key = JSON.stringify([url, kind, reference]);
+      if (!seen.has(key) && externalResources.length < 2000) {
+        seen.add(key); externalResources.push({url:url,kind:kind,reference:reference});
+      }
+    }
+    var reference = entryPath || 'index.html';
+    if (remoteBase) add(base,'external base',reference,'');
+    doc.querySelectorAll('link[href]').forEach(function (el) {
+      var rel = el.getAttribute('rel') || '';
+      if (/(?:^|\s)(?:stylesheet|icon|apple-touch-icon|preload|modulepreload)(?:\s|$)/i.test(rel)) add(el.getAttribute('href'),'link '+rel,reference);
+    });
+    doc.querySelectorAll('[src],[poster]').forEach(function (el) {
+      ['src','poster'].forEach(function (attr) { if (el.hasAttribute(attr)) add(el.getAttribute(attr),el.tagName.toLowerCase()+' '+attr,reference); });
+    });
+    doc.querySelectorAll('svg image,svg use').forEach(function (el) { add(el.getAttribute('href') || el.getAttribute('xlink:href'),'SVG href',reference); });
+    doc.querySelectorAll('[srcset]').forEach(function (el) { srcsetCandidates(el.getAttribute('srcset')).forEach(function (url) { add(url,el.tagName.toLowerCase()+' srcset',reference); }); });
+    doc.querySelectorAll('style,[style]').forEach(function (el) {
+      var origin = el.getAttribute('data-vf-inlined-stylesheet') || reference + (el.tagName === 'STYLE' ? ' inline <style>' : ' style attribute');
+      cssReferences(el.tagName === 'STYLE' ? el.textContent : el.getAttribute('style')).forEach(function (item) { add(item.url,item.kind,origin); });
+    });
+    return {externalResources:externalResources};
   }
 
   function serializeDocument(document) {
@@ -739,11 +818,13 @@
         html: serializeDocument(document),
         pages: htmlPaths.map(function (path) { return { path: path, name: basename(path) }; }),
         entryPath: entryPath,
-        warnings: warnings
+        warnings: warnings,
+        externalResources: describe(serializeDocument(document), entryPath).externalResources
       };
     });
   }
 
   global.VFFolder = global.VFFolder || {};
   global.VFFolder.prepare = prepare;
+  global.VFFolder.describe = describe;
 })(typeof window !== 'undefined' ? window : globalThis);
