@@ -55,3 +55,4 @@
 [GitHub PR #5：背景貼圖增補](https://github.com/cw91020251212/VisionFlow/pull/5)，base為第四批 `fix/phase4-delivery-resources`。程式提交 `cd0c72c`，包含四批修復及本次背景貼圖，未合併main。
 
 已核驗本機及公開預覽的全部16個靜態檔案位元內容一致、HTTP 200；路由為 `/`；`.git/config`、`.env`及測試檔案返回404。原第四批預覽不存在新模組，證實沒有替換舊預覽。正式main仍為 `44e60b6c65a7b096105384518b24b072106eab5c`。最後保存的文件紀錄不改動已通過140項回歸的應用程式。
+
