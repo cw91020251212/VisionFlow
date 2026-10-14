@@ -35,3 +35,12 @@ Firefox、Safari、Windows／Android系統分享面板及真實手機全套人�
 建議下一步按順序審閱前三批及第四批 PR，再集中試用實際的舊設計與原網站素材；確認後另行合併／上線。這次交付並非整個軟體已全面無缺陷的承諾。
 
 瀏覽器標準參考：[MDN Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)、[MDN Navigator.share](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share)。
+
+## 已保存的交付位置
+
+第四批程式提交：`330d42fe7c5aa1e59fe0e7372569256944fe258f`。已上傳分支並核對 PR head與遠端相同，PR仍為OPEN、未合併。
+
+- [第四批 GitHub PR #4](https://github.com/cw91020251212/VisionFlow/pull/4)，base為第三批分支。
+- [第四批獨立臨時預覽](https://8769-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)，不是正式 GitHub Pages。
+
+已驗證本機及公開預覽 HTTP 200、應用檔案位元內容、相對manifest及路由；`.git/config`、`.env`和測試目錄回傳404，未暴露原始儲存庫或本機設定。既有三批預覽及正式main未替換。最後的文件提交僅補上驗證紀錄，不改動已通過119項回歸的應用程式。
