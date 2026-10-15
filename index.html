@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="zh-HK">
 <head>
-  <meta name="visionflow-app-version" content="appearance-export-v2">
+  <meta name="visionflow-app-version" content="toolbar-scroll-v1">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionFlow | 專業網頁視覺設計</title>
-  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23356df3'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-family='Arial' font-size='44' font-weight='700' fill='white'%3EV%3C/text%3E%3C/svg%3E" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -112,6 +112,9 @@
     .file-drop input { width: 100%; margin-top: 8px; font-size: 11px; }
     .file-drop .folder-label { display: block; margin-top: 8px; text-align: center; cursor: pointer; }
     .file-drop .folder-label input { display: none; }
+    .folder-import-status { display: block; margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .folder-import-status[data-state="error"] { color: var(--danger); }
+    .folder-import-status[data-state="success"] { color: #16834c; }
     
     .layer-list { display: grid; gap: 2px; }
     .layer { display: flex; align-items: center; gap: 4px; width: 100%; padding: 4px 5px; text-align: left; color: var(--text); border: 1px solid transparent; border-radius: 5px; background: transparent; font-size: 11px; overflow: hidden; }
@@ -137,6 +140,8 @@
     .field.full { grid-column: 1 / -1; }
     .field label { color: var(--muted); font-size: 10px; margin: 0; }
     .field input[type="text"], .field input[type="number"], .field textarea, .field select { width: 100%; min-width: 0; padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); background: var(--panel); font-size: 11px; }
+    .field input[type="range"] { width: 100%; margin: 3px 0; accent-color: var(--accent); }
+    .field output { float: right; color: var(--accent); font-weight: 700; }
     .checkbox-field { display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 4px; cursor: pointer; font-weight: bold; }
     .color-input { display: flex; gap: 4px; align-items: center; }
     .color-input input[type=color] { width: 26px; padding: 1px; height: 23px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; }
@@ -264,7 +269,7 @@
   <div class="app">
     <header class="main-toolbar" id="main-toolbar">
       <div class="toolbar-group">
-        <div class="brand"><div class="brand-mark"><img src="icon.png" alt="V" style="width: 100%; height: 100%; border-radius: 4px; object-fit: cover;" onerror="this.style.display='none'"></div><span>VisionFlow</span></div>
+        <div class="brand"><div class="brand-mark" aria-hidden="true">V</div><span>VisionFlow</span></div>
         <div class="toolbar-divider"></div>
         <button class="button icon-btn" id="toggle-left" title="顯示/隱藏 圖層面板">☰</button>
         <button class="button icon-btn" id="toggle-right" title="顯示/隱藏 設定面板">⚙</button>
@@ -276,10 +281,11 @@
         <!-- 下拉式繪圖按鈕 -->
         <button class="button icon-btn" id="add-shape-btn" title="新增圖形/文字 (點擊展開選單)">▱ ▾</button>
 
-        <button class="button icon-btn" id="group-btn" title="群組 / 解散群組 (Ctrl+G)">🔗</button>
+        <button class="button icon-btn" id="group-btn" title="建立群組 (Ctrl+G)" aria-label="建立群組">▦</button>
 
         <button class="button icon-btn" id="lock-position" title="鎖定位置 (防誤觸，縮放時維持中心點不變)">🔒</button>
-        <button class="button icon-btn" id="toggle-viewport" title="切換 電腦/手機 預覽尺寸">💻</button>
+        <button class="button icon-btn" id="toggle-tablet" title="切換平板預覽尺寸" aria-label="切換平板預覽尺寸" aria-pressed="false">▤</button>
+        <button class="button icon-btn" id="toggle-viewport" title="切換桌面／手機預覽尺寸" aria-label="切換桌面／手機預覽尺寸">💻</button>
         <div class="toolbar-divider"></div>
         <button class="button icon-btn" id="toggle-guides" title="參考線 (選取物件後點擊鎖定，再點解除)">⌗</button>
         <button class="button icon-btn" id="add-vertical-guide" title="新增 垂直參考線">＋│</button>
@@ -327,6 +333,7 @@
             <strong>匯入 HTML／外觀檔案</strong>
             <input id="file-input" type="file" accept=".html,.htm,.json,text/html,application/json" multiple>
             <label class="button folder-label">選取網站資料夾<input id="folder-input" type="file" webkitdirectory directory multiple></label>
+            <p id="folder-import-status" class="folder-import-status" role="status" aria-live="polite" hidden></p>
             <p class="hint">只編輯目前 HTML 入口；支援靜態 CSS／圖片資源。SPA、模組載入及伺服器路由不保證可預覽。匯出並非原工程。</p>
             <label class="field"><span>資料夾入口頁</span><select id="vf-entry-page" disabled><option>尚未匯入</option></select></label>
             <label class="checkbox-field" style="margin-top:8px"><input type="checkbox" id="vf-trusted-scripts">允許可信頁面的脚本預覽</label>
@@ -419,7 +426,7 @@
   </div>
 
   <div id="context-menu" class="context-menu">
-    <button id="ctx-group">🔗 建立群組 (Group)</button>
+    <button id="ctx-group">▦ 建立群組 (Group)</button>
     <button id="ctx-ungroup">💔 解散群組 (Ungroup)</button>
   </div>
 
@@ -439,6 +446,29 @@
       return "#" + (1 << 24 | parseInt(match[0]) << 16 | parseInt(match[1]) << 8 | parseInt(match[2])).toString(16).slice(1);
     }
     function clamp(value, min, max) { return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min)); }
+    function colorAlphaPercent(color) {
+      const value = String(color || '').trim();
+      const hex = value.match(/^#([\da-f]{4}|[\da-f]{8})$/i);
+      if (hex) { const alpha = hex[1].length === 4 ? parseInt(hex[1][3] + hex[1][3], 16) : parseInt(hex[1].slice(6, 8), 16); return Math.round(alpha / 255 * 100); }
+      const functional = value.match(/^(?:rgba?|hsla?)\((.*)\)$/i);
+      if (functional) {
+        const parts = functional[1].split(/[,/]/).map(part => part.trim()).filter(Boolean);
+        if (parts.length >= 4) { const raw = parts.at(-1), amount = parseFloat(raw); if (Number.isFinite(amount)) return clamp(Math.round(raw.endsWith('%') ? amount : amount * 100), 0, 100); }
+      }
+      return 100;
+    }
+    function shadowHex(color) {
+      const value = String(color || '#000000').trim();
+      const hex = value.match(/^#([\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i);
+      if (hex) { const raw = hex[1]; if (raw.length <= 4) return '#' + raw.slice(0, 3).split('').map(ch => ch + ch).join(''); return '#' + raw.slice(0, 6); }
+      try { const context = document.createElement('canvas').getContext('2d'); if (context) { context.fillStyle = '#000000'; context.fillStyle = value; const parsed = context.fillStyle; if (/^#[\da-f]{6}$/i.test(parsed)) return parsed; const rgb = parsed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i); if (rgb) return '#' + rgb.slice(1, 4).map(channel => Number(channel).toString(16).padStart(2, '0')).join(''); } } catch {}
+      return rgbToHex(value);
+    }
+    function colorWithOpacity(color, percent) {
+      const hex = shadowHex(color), channels = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+      const opacity = clamp(Number(percent), 0, 100);
+      return opacity >= 100 ? hex : `rgba(${channels.join(', ')}, ${Number((opacity / 100).toFixed(3))})`;
+    }
     function escapeHtml(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
 
     function sysAlert(text) {
@@ -459,6 +489,19 @@
     let editing = false; let demoFieldDirty = false; let isTyping = false;
     let zoom = 1; let activeTheme = 'light'; let viewportMode = 'desktop';
     let isPositionLocked = false;
+
+    const VIEWPORT_PRESETS = Object.freeze({
+      desktop: Object.freeze({width:1280,height:720,label:'桌面'}),
+      tablet: Object.freeze({width:768,height:1024,label:'平板'}),
+      mobile: Object.freeze({width:375,height:812,label:'手機'})
+    });
+    function viewportSize(mode = viewportMode) { const preset = VIEWPORT_PRESETS[mode] || VIEWPORT_PRESETS.desktop; return {width:preset.width,height:preset.height}; }
+    function updateViewportControls() {
+      const size = viewportSize(), preset = VIEWPORT_PRESETS[viewportMode] || VIEWPORT_PRESETS.desktop;
+      const tablet = document.getElementById('toggle-tablet'), desktopMobile = document.getElementById('toggle-viewport');
+      if (tablet) { tablet.classList.toggle('active-tool',viewportMode==='tablet'); tablet.setAttribute('aria-pressed',String(viewportMode==='tablet')); tablet.title = viewportMode==='tablet' ? '目前平板預覽 768×1024；按一下返回桌面' : '切換平板預覽尺寸（768×1024）'; }
+      if (desktopMobile) { desktopMobile.textContent = viewportMode==='mobile' ? '📱' : viewportMode==='tablet' ? '▤' : '💻'; desktopMobile.title = `目前${preset.label}預覽 ${size.width}×${size.height}；按一下切換桌面／手機`; desktopMobile.setAttribute('aria-label',desktopMobile.title); }
+    }
     
     let importedMode = false; let importedSourceHtml = ''; let importedHtml = '';
     let importedFrame = null; let importedSelected = null; let importedSelectedElements = [];
@@ -524,8 +567,7 @@
         points.push({ x, y, kind, tier: SNAP_TIER[kind] }); 
       };
       
-      const maxW = importedMode ? importedViewport.width : (viewportMode === 'mobile' ? 375 : 1280);
-      const maxH = importedMode ? importedViewport.height : (viewportMode === 'mobile' ? 812 : 720);
+      const {width:maxW,height:maxH} = importedMode ? importedViewport : viewportSize();
       addV(0, 0, maxH, 'bound'); addV(maxW, 0, maxH, 'bound'); addH(0, 0, maxW, 'bound'); addH(maxH, 0, maxW, 'bound');
       
       const addRect = (x, y, w, h) => {
@@ -716,8 +758,7 @@
         else { const a = Math.min(from, to), b = Math.max(from, to); Object.assign(el.style, { top:`${pos}px`, left:`${a}px`, width:`${b - a}px` }); }
         layer.appendChild(el);
       };
-      const maxW = importedMode ? importedViewport.width : (viewportMode === 'mobile' ? 375 : 1280);
-      const maxH = importedMode ? importedViewport.height : (viewportMode === 'mobile' ? 812 : 720);
+      const {width:maxW,height:maxH} = importedMode ? importedViewport : viewportSize();
       const isInfer = snap.kind === 'intersection' || snap.kind === 'extension';
       (opts.vLines || (snap.vLine ? [snap.vLine] : [])).forEach(l => drawLine('vertical', l.x, Math.max(-2000, Math.min(l.y1, -0)), Math.min(maxH + 2000, Math.max(l.y2, maxH)), isInfer));
       (opts.hLines || (snap.hLine ? [snap.hLine] : [])).forEach(l => drawLine('horizontal', l.y, Math.max(-2000, Math.min(l.x1, -0)), Math.min(maxW + 2000, Math.max(l.x2, maxW)), isInfer));
@@ -772,9 +813,9 @@
       const groupIds = selectedItems.map(item => importedMode ? importedGroupIds.get(item) : item.groupId);
       const allSameGroup = selectedItems.length > 1 && groupIds.every(Boolean) && new Set(groupIds).size === 1;
       if (allSameGroup) {
-         btn.innerHTML = '💔'; btn.title = '解散群組 (Ctrl+G)'; btn.classList.add('active-tool');
+         btn.textContent = '▦'; btn.title = '解散群組 (Ctrl+G)'; btn.setAttribute('aria-label','解散群組'); btn.classList.add('active-tool');
       } else {
-         btn.innerHTML = '🔗'; btn.title = '建立群組 (Ctrl+G)'; btn.classList.remove('active-tool');
+         btn.textContent = '▦'; btn.title = '建立群組 (Ctrl+G)'; btn.setAttribute('aria-label','建立群組'); btn.classList.remove('active-tool');
       }
     }
 
@@ -795,7 +836,7 @@
         } else {
           const newGroupId = 'imported-group-' + (++importedGroupSeq);
           selectedItems.forEach(el => importedGroupIds.set(el, newGroupId));
-          setStatus('🔗 已成功將選取物件建立為群組！而家可以整體拖曳。');
+          setStatus('已將選取物件建立為群組，現在可以整體拖曳。');
         }
         importedSelectedElements = importedSelectionWithGroups(selectedItems);
         importedSelected = importedSelectedElements[0] || null;
@@ -812,7 +853,7 @@
       } else {
         const newGroupId = 'group-' + Date.now();
         selectedItems.forEach(i => i.groupId = newGroupId);
-        setStatus('🔗 已成功將選取物件建立為群組！只能整體拖曳，防止拉散。');
+        setStatus('已將選取物件建立為群組，只能整體拖曳，避免拉散。');
       }
       setDemoSelection(selectedIds); renderDemo();
       if (!isTyping) renderDemoInspector();
@@ -893,7 +934,7 @@
         id, type: 'shape', x: Math.max(50, (artboard.clientWidth / 2) - 50), y: Math.max(50, (artboard.clientHeight / 2) - 50), 
         w: 100, h: 100,
         color: '#356df3', borderColor: 'transparent', borderWidth: 0,
-        borderRadius: 0, customBorderRadius: null, clipPath: null,
+        borderRadius: 0, customBorderRadius: null, clipPath: null, sOpacity: 24, textShadowOpacity: 65,
         name: '圖形', 
         content: '' // 圖案預設為純色塊，無文字
       };
@@ -982,7 +1023,7 @@
 
     function addManualGuide(kind) {
       savePoint(); const scope = importedMode ? 'imported' : 'demo'; const list = scope === 'imported' ? importedManualGuides : manualGuides;
-      const width=importedMode?importedViewport.width:(viewportMode==='mobile'?375:1280), height=importedMode?importedViewport.height:(viewportMode==='mobile'?812:720);
+      const {width,height}=importedMode?importedViewport:viewportSize();
       const win=importedMode?importedFrame.contentWindow:null;
       const position = Math.round((kind==='vertical'?width/2+(win?.scrollX||0):height/2+(win?.scrollY||0)));
       list.push({ kind, position, copied: false }); selectedManualGuide = { scope, index: list.length - 1, kind };
@@ -1051,7 +1092,7 @@
 
     function renderDemo() {
       importedMode = false;
-      const canvasWidth = viewportMode === 'mobile' ? 375 : 1280; const canvasHeight = viewportMode === 'mobile' ? 812 : 720;
+      const {width:canvasWidth,height:canvasHeight} = viewportSize();
       artboard.className = 'artboard';
       artboard.style.width = `${canvasWidth}px`; artboard.style.height = `${canvasHeight}px`;
       artboard.style.transform = `scale(${zoom})`; wrap.style.width = `${canvasWidth * zoom}px`; wrap.style.height = `${canvasHeight * zoom}px`;
@@ -1092,7 +1133,7 @@
         artboard.appendChild(element);
         if (editing && isSelected) artboard.appendChild(selectionOverlay);
       }
-      renderLayers(); renderGuides(); drawRulers();
+      renderLayers(); renderGuides(); drawRulers(); updateViewportControls();
     }
     
     // 群組核心：自動擴展選取
@@ -1369,7 +1410,7 @@
         if (upEvent?.cancelled) return;
         
         const finalPos = list[index].position;
-        const limit = importedMode ? (kind === 'vertical' ? importedViewport.width : importedViewport.height) : (kind === 'vertical' ? (viewportMode === 'mobile' ? 375 : 1280) : (viewportMode === 'mobile' ? 812 : 720));
+        const size=importedMode?importedViewport:viewportSize(),limit=kind==='vertical'?size.width:size.height;
         if (finalPos < -100 || finalPos > limit + 100) {
             deleteManualGuide(importedMode ? 'imported' : 'demo', index);
         } else {
@@ -1624,6 +1665,7 @@
 
     function bindImportedFrame() {
       isIframeLoaded = true;
+      if (folderFiles.some(file => file.webkitRelativePath)) setFolderImportStatus(`資料夾預覽已就緒：「${appearanceOrigin().entryPath}」（${folderPagePaths.length} 個 HTML 入口）。`,'success');
       const doc = importedFrame.contentDocument; bindPointerWorkspace(doc); if (!doc?.body) { renderLayers(); return; }
       const style = doc.createElement('style'); style.id = 'ui-editor-style'; style.dataset.vfHelper = 'style';
       style.textContent = '.guide-line::after{content:"";position:absolute}.guide-line.vertical::after{top:0;bottom:0;left:-8px;width:17px}.guide-line.horizontal::after{left:0;right:0;top:-8px;height:17px}html.pointer-tool #ui-editor-overlay .resize-handle{display:none!important} #ui-editor-overlay{position:absolute!important;box-sizing:border-box!important;outline:2px solid #356df3!important;outline-offset:-2px!important;border:none!important;margin:0!important;z-index:2147483647!important;pointer-events:none!important}#ui-editor-overlay .resize-handle{position:absolute!important;z-index:100!important;width:10px!important;height:10px!important;padding:0!important;border:0!important;border-radius:3px!important;background:#356df3!important;box-shadow:0 0 0 1.5px #fff!important;pointer-events:auto!important;touch-action:none!important}#ui-editor-overlay .resize-handle.n{top:-5px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.s{bottom:-5px!important;left:50%!important;right:auto!important;top:auto!important;transform:translateX(-50%)!important;cursor:ns-resize!important}#ui-editor-overlay .resize-handle.e{top:50%!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.w{top:50%!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;cursor:ew-resize!important}#ui-editor-overlay .resize-handle.nw{top:-5px!important;left:-5px!important;right:auto!important;bottom:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.ne{top:-5px!important;right:-5px!important;left:auto!important;bottom:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.sw{bottom:-5px!important;left:-5px!important;right:auto!important;top:auto!important;transform:none!important;cursor:nesw-resize!important}#ui-editor-overlay .resize-handle.se{bottom:-5px!important;right:-5px!important;left:auto!important;top:auto!important;transform:none!important;cursor:nwse-resize!important}#ui-editor-overlay .resize-handle.c{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;cursor:move!important} html.position-locked .ui-editor-selected{cursor:default!important}html.position-locked #ui-editor-overlay .resize-handle.c{display:none!important}';
@@ -1674,12 +1716,12 @@
 
     function updateImportedViewport() { 
       if (!importedFrame?.contentDocument?.documentElement) return; 
-      const viewWidth = viewportMode === 'mobile' ? 375 : 1280; const viewHeight = viewportMode === 'mobile' ? 812 : 720; 
+      const {width:viewWidth,height:viewHeight} = viewportSize();
       importedFrame.style.width = `${viewWidth}px`; importedFrame.style.height = `${viewHeight}px`; importedViewport = { width: viewWidth, height: viewHeight }; 
       artboard.style.width = `${viewWidth}px`; artboard.style.height = `${viewHeight}px`; wrap.style.width = `${viewWidth * zoom}px`; wrap.style.height = `${viewHeight * zoom}px`; artboard.style.transform = `scale(${zoom})`; 
       refreshAppearanceStyles();
       importedSelectedElements.forEach(syncStateContext);
-      updateImportedOverlay(); drawRulers();
+      updateImportedOverlay(); drawRulers(); updateViewportControls();
     }
     
     function renderImported() { 
@@ -1789,7 +1831,7 @@
         rects.forEach(r => { r.state.positionChanged = true; r.state.alignIntent = kind; });
         applyImportedState(); if (!isTyping) renderImportedInspector();
       } else {
-        const maxWidth = viewportMode === 'mobile' ? 375 : 1280; const maxHeight = viewportMode === 'mobile' ? 812 : 720;
+        const {width:maxWidth,height:maxHeight} = viewportSize();
         if (selected.length === 1) { 
           const item = selected[0]; 
           if (kind === 'left') item.x = 0; if (kind === 'center-x') item.x = Math.round((maxWidth - item.w) / 2); if (kind === 'right') item.x = maxWidth - item.w; 
@@ -1849,7 +1891,9 @@
         html += '<div class="field"><label>水平方向 (X)</label><input id="sX" type="number" value="' + (item.sX || 0) + '"></div>';
         html += '<div class="field"><label>垂直方向 (Y)</label><input id="sY" type="number" value="' + (item.sY || 0) + '"></div>';
         html += '<div class="field"><label>模糊度 (Blur)</label><input id="sBlur" type="number" min="0" value="' + (item.sBlur || 0) + '"></div>';
-        html += '<div class="field"><label>投影顏色</label><div class="color-input"><input id="sColor" type="color" value="' + rgbToHex(item.sColor) + '"></div></div>';
+        html += '<div class="field"><label>投影顏色</label><div class="color-input"><input id="sColor" type="color" value="' + shadowHex(item.sColor || '#000000') + '"></div></div>';
+        const opacity = item.sOpacity == null ? colorAlphaPercent(item.sColor || 'rgba(0,0,0,0.2)') : clamp(Number(item.sOpacity), 0, 100);
+        html += '<div class="field full"><label for="sOpacity">投影不透明度 <output id="sOpacity-value">' + opacity + '%</output></label><input id="sOpacity" type="range" min="0" max="100" value="' + opacity + '" aria-label="投影不透明度"></div>';
         html += '</div>';
       }
       html += '</div>';
@@ -1862,7 +1906,9 @@
       html += '<div class="field"><label>文字顏色</label><div class="color-input"><input id="textColor" type="color" value="' + (item.textColor || '#17202a') + '"></div></div>';
       html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="textShadow" ' + (item.textShadow ? 'checked' : '') + '> 開啟文字陰影</label>';
       if (item.textShadow) {
-        html += '<div class="color-input" style="margin-top:4px"><input id="shadowColor" type="color" value="' + (item.shadowColor || '#000000') + '"></div>';
+        html += '<div class="color-input" style="margin-top:4px"><input id="shadowColor" type="color" value="' + shadowHex(item.shadowColor || '#000000') + '"></div>';
+        const textOpacity = item.textShadowOpacity == null ? colorAlphaPercent(item.shadowColor || '#000000') : clamp(Number(item.textShadowOpacity), 0, 100);
+        html += '<div class="field full" style="margin-top:4px"><label for="textShadowOpacity">文字陰影不透明度 <output id="textShadowOpacity-value">' + textOpacity + '%</output></label><input id="textShadowOpacity" type="range" min="0" max="100" value="' + textOpacity + '" aria-label="文字陰影不透明度"></div>';
       }
       html += '</div></div></div>';
       
@@ -1900,12 +1946,14 @@
       item.sY = document.querySelector('#sY') ? Number(document.querySelector('#sY').value) : item.sY;
       item.sBlur = document.querySelector('#sBlur') ? Number(document.querySelector('#sBlur').value) : item.sBlur;
       item.sColor = document.querySelector('#sColor')?.value ?? item.sColor;
+      item.sOpacity = document.querySelector('#sOpacity') ? Number(document.querySelector('#sOpacity').value) : item.sOpacity;
       item.content = document.querySelector('#content')?.value ?? item.content;
       item.fontFamily = document.querySelector('#fontFamily')?.value ?? item.fontFamily;
       item.fontSize = document.querySelector('#fontSize') ? Number(document.querySelector('#fontSize').value) : item.fontSize;
       item.textColor = document.querySelector('#textColor')?.value ?? item.textColor;
       item.textShadow = document.querySelector('#textShadow')?.checked ?? item.textShadow;
       item.shadowColor = document.querySelector('#shadowColor')?.value ?? item.shadowColor;
+      item.textShadowOpacity = document.querySelector('#textShadowOpacity') ? Number(document.querySelector('#textShadowOpacity').value) : item.textShadowOpacity;
 
       if (event && event.type === 'input') demoFieldDirty = true;
       if (commit) { demoFieldDirty = false; }
@@ -1959,6 +2007,7 @@
         html += '<div class="field"><label>垂直方向 (Y)</label><input id="isY" type="number" value="' + state.sY + '"></div>';
         html += '<div class="field"><label>模糊度 (Blur)</label><input id="isBlur" type="number" min="0" value="' + state.sBlur + '"></div>';
         html += '<div class="field"><label>投影顏色</label><div class="color-input"><input id="isColor" type="color" value="' + state.sColor + '"></div></div>';
+        html += '<div class="field full"><label for="isOpacity">投影不透明度 <output id="isOpacity-value">' + state.sOpacity + '%</output></label><input id="isOpacity" type="range" min="0" max="100" value="' + state.sOpacity + '" aria-label="投影不透明度"></div>';
         html += '</div>';
       }
       html += '</div>';
@@ -1971,7 +2020,10 @@
         html += '<div class="field"><label>文字大小 (px)</label><input type="number" id="ifontSize" value="' + state.fontSize + '"></div>';
         html += '<div class="field"><label>文字顏色</label><div class="color-input"><input id="itextColor" type="color" value="' + state.textColor + '"></div></div>';
         html += '<div class="field full"><label class="checkbox-field"><input type="checkbox" id="itextShadow" ' + (state.textShadow ? 'checked' : '') + '> 開啟文字陰影</label>';
-        if (state.textShadow) { html += '<div class="color-input" style="margin-top:4px"><input id="ishadowColor" type="color" value="' + state.shadowColor + '"></div>'; }
+        if (state.textShadow) {
+          html += '<div class="color-input" style="margin-top:4px"><input id="ishadowColor" type="color" value="' + state.shadowColor + '"></div>';
+          html += '<div class="field full" style="margin-top:4px"><label for="itextShadowOpacity">文字陰影不透明度 <output id="itextShadowOpacity-value">' + state.textShadowOpacity + '%</output></label><input id="itextShadowOpacity" type="range" min="0" max="100" value="' + state.textShadowOpacity + '" aria-label="文字陰影不透明度"></div>';
+        }
         html += '</div></div>';
       } else {
         html += '<p class="hint">呢個係容器元素，請直接點選入面嘅文字先可以修改。</p>';
@@ -1982,6 +2034,7 @@
     }
 
     inspector.addEventListener('input', e => {
+       const opacityOutput=document.getElementById(e.target.id+'-value'); if(opacityOutput) opacityOutput.textContent=e.target.value+'%';
        if(updateBackgroundField(e,false) || updateBatchAppearance(e,false))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
@@ -1991,6 +2044,7 @@
     });
     
     inspector.addEventListener('change', e => {
+       const opacityOutput=document.getElementById(e.target.id+'-value'); if(opacityOutput) opacityOutput.textContent=e.target.value+'%';
        if(updateBackgroundField(e,true) || updateBatchAppearance(e,true))return;
        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
           if (importedMode) {
@@ -2071,7 +2125,14 @@
     document.querySelector('#fit-view').addEventListener('click',()=>fitView());
 
     document.querySelector('#edit-mode').addEventListener('click', () => { abortPointerGesture(); boxSelectMode=false; editing = !editing; updateToolButtons(); if (importedMode) renderImportedState(); else renderDemo(); });
-    document.querySelector('#toggle-viewport').addEventListener('click', () => { abortPointerGesture(); cancelBackgroundUpload(); savePoint(); viewportMode = viewportMode === 'desktop' ? 'mobile' : 'desktop'; if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else renderDemo(); fitView(); scheduleAppearanceSave(); });
+    function setViewportMode(mode) {
+      if (!VIEWPORT_PRESETS[mode] || mode === viewportMode) return;
+      abortPointerGesture(); cancelBackgroundUpload(); savePoint(); viewportMode = mode;
+      if (importedMode) { updateImportedViewport(); renderImportedInspector(); } else { renderDemo(); renderDemoInspector(); }
+      updateViewportControls(); fitView(); setStatus(`已切換至${VIEWPORT_PRESETS[mode].label}預覽（${VIEWPORT_PRESETS[mode].width}×${VIEWPORT_PRESETS[mode].height}）。`); scheduleAppearanceSave();
+    }
+    document.querySelector('#toggle-viewport').addEventListener('click', () => setViewportMode(viewportMode === 'desktop' ? 'mobile' : 'desktop'));
+    document.querySelector('#toggle-tablet').addEventListener('click', () => setViewportMode(viewportMode === 'tablet' ? 'desktop' : 'tablet'));
     document.querySelector('#undo').addEventListener('click', undo); document.querySelector('#redo').addEventListener('click', redo);
     document.querySelector('#reset').addEventListener('click', () => {
       cancelBackgroundUpload();importRequestSequence++;
@@ -2083,7 +2144,7 @@
       pendingGroups = []; pendingSelection = []; pendingGuideTargets = []; importedGroupIds = new WeakMap();
       syncAppearanceControls();
       manualGuides = []; importedManualGuides = []; demoGuideTargets = []; importedGuideTargets = []; hiddenDemoGuideKeys = []; hiddenImportedGuideKeys = [];
-      eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; isPositionLocked = false; isIframeLoaded = false; updateToolButtons(); viewportMode = 'desktop'; applyTheme(themes[0]); renderDemo();
+      eraserMode = false; panMode = false; measureMode = false; measureState = 'idle'; isPositionLocked = false; isIframeLoaded = false; updateToolButtons(); viewportMode = 'desktop'; updateViewportControls(); applyTheme(themes[0]); renderDemo(); renderLayers(); renderDemoInspector(); syncAppearanceControls(); updateHistoryButtons(); setStatus('畫布已清空；屬性面板及圖層已同步重設。'); scheduleAppearanceSave();
     });
     
     document.querySelector('#zoom-in').addEventListener('click', () => { zoomRevision++; zoom = clamp(zoom + .1, .1, 1.5); refreshLayoutAndRulers(); });
@@ -2136,7 +2197,7 @@
       });
     }
 
-    function render() { if (!importedMode) applyTheme(themes.find(theme => theme.id === activeTheme) || themes[0]); renderThemes(); if (importedMode) renderImportedState(); else renderDemo(); updateHistoryButtons(); drawRulers(); }
+    function render() { if (!importedMode) applyTheme(themes.find(theme => theme.id === activeTheme) || themes[0]); renderThemes(); if (importedMode) renderImportedState(); else renderDemo(); updateViewportControls(); updateHistoryButtons(); drawRulers(); }
     
     document.addEventListener('keydown', e => {
       const tag = (e.target.tagName || '').toUpperCase();
@@ -2165,16 +2226,2819 @@
 
 
   </script>
-  <script src="folder-import.js?v=guides-visible-v1"></script>
-  <script src="workspace-state.js?v=guides-visible-v1"></script>
-  <script src="pointer-tools.js?v=guides-visible-v1"></script>
-  <script src="background-image.js?v=guides-visible-v1"></script>
-  <script src="canvas.js?v=guides-visible-v1"></script>
-  <script src="project-io.js?v=guides-visible-v1"></script>
-  <script src="appearance.js?v=appearance-export-v2"></script>
-  <script src="maintenance.js?v=guides-visible-v1"></script>
-  <script src="delivery.js?v=guides-visible-v1"></script>
-  <script src="toolbar-scroll.js?v=guides-visible-v1"></script>
+  <script>
+/*
+ * VisionFlow folder import helper
+ *
+ * Browser-only, dependency-free helper for <input type="file" webkitdirectory>.
+ * It deliberately uses data: URLs (never blob: URLs), so the returned document can
+ * be assigned to a preview/editor opened from file:// without a web server.
+ *
+ * Public contract:
+ *   window.VFFolder.prepare(files, entryPath?) -> Promise<{
+ *     html: string,
+ *     pages: Array<{ path: string, name: string }>,
+ *     entryPath: string,
+ *     warnings: string[],
+ *     externalResources: Array<{url:string,kind:string,reference:string}>
+ *   }>
+ *
+ * `pages` lists every discovered HTML file.  Only `entryPath` is read and
+ * transformed into `html`; callers can call prepare again to switch pages.
+ * JavaScript is never run by this helper.  Script tags in returned HTML are made
+ * inert (type="application/x-vf-disabled-script") as a defense in depth measure;
+ * the editor preview should also keep scripts disabled by default.
+ */
+(function attachVFFolder(global) {
+  'use strict';
+
+  var DATA_DISABLED_SCRIPT_TYPE = 'application/x-vf-disabled-script';
+  var MIME_BY_EXTENSION = {
+    css: 'text/css;charset=utf-8',
+    html: 'text/html;charset=utf-8', htm: 'text/html;charset=utf-8',
+    js: 'text/javascript;charset=utf-8', mjs: 'text/javascript;charset=utf-8',
+    json: 'application/json;charset=utf-8', map: 'application/json;charset=utf-8',
+    svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', ico: 'image/x-icon',
+    bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff',
+    mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', mp3: 'audio/mpeg',
+    wav: 'audio/wav', oga: 'audio/ogg', ogg: 'audio/ogg',
+    woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
+    eot: 'application/vnd.ms-fontobject', pdf: 'application/pdf'
+  };
+
+  function slashPath(value) {
+    return String(value || '').replace(/\\/g, '/');
+  }
+
+  // Normalize only virtual folder paths. It intentionally has no filesystem access.
+  function normalizePath(value) {
+    var path = slashPath(value).replace(/^\.\//, '').replace(/^\/+/, '');
+    var parts = path.split('/');
+    var output = [];
+    for (var i = 0; i < parts.length; i += 1) {
+      var part = parts[i];
+      if (!part || part === '.') continue;
+      if (part === '..') {
+        if (output.length) output.pop();
+        continue;
+      }
+      output.push(part);
+    }
+    return output.join('/');
+  }
+
+  function dirname(path) {
+    var clean = normalizePath(path);
+    var index = clean.lastIndexOf('/');
+    return index < 0 ? '' : clean.slice(0, index);
+  }
+
+  function basename(path) {
+    var clean = normalizePath(path);
+    var index = clean.lastIndexOf('/');
+    return index < 0 ? clean : clean.slice(index + 1);
+  }
+
+  function extension(path) {
+    var name = basename(path);
+    var index = name.lastIndexOf('.');
+    return index < 0 ? '' : name.slice(index + 1).toLowerCase();
+  }
+
+  function isHtmlPath(path) {
+    return /\.html?$/i.test(path);
+  }
+
+  function isRemoteOrSpecialUrl(value) {
+    var url = String(value || '').trim();
+    // This includes http(s), data, hash-only URLs, protocol-relative URLs, mailto,
+    // javascript, file, and every other URI scheme. None are folder resources.
+    return !url || url.charAt(0) === '#' || url.charAt(0) === '?' ||
+      /^\/\//.test(url) || /^[a-z][a-z0-9+.-]*:/i.test(url);
+  }
+
+  function splitUrl(value) {
+    var url = String(value || '').trim();
+    var hashIndex = url.indexOf('#');
+    var beforeHash = hashIndex === -1 ? url : url.slice(0, hashIndex);
+    var hash = hashIndex === -1 ? '' : url.slice(hashIndex);
+    var queryIndex = beforeHash.indexOf('?');
+    return {
+      pathname: queryIndex === -1 ? beforeHash : beforeHash.slice(0, queryIndex),
+      // A query describes the original fetched URL and has no equivalent after
+      // inlining. Fragments are retained (notably for SVG symbol references).
+      fragment: hash
+    };
+  }
+
+  function safelyDecodePath(path) {
+    try {
+      return decodeURIComponent(path);
+    } catch (_) {
+      return path;
+    }
+  }
+
+  function resolveVirtualPath(baseDirectory, relativePath) {
+    var input = slashPath(safelyDecodePath(relativePath));
+    if (input.charAt(0) === '/') return normalizePath(input);
+    return normalizePath((baseDirectory ? baseDirectory + '/' : '') + input);
+  }
+
+  function toArray(files) {
+    if (!files || typeof files.length !== 'number') {
+      throw new TypeError('VFFolder.prepare expects a File array or FileList.');
+    }
+    return Array.prototype.slice.call(files);
+  }
+
+  function readAsText(file) {
+    if (file && typeof file.text === 'function') return file.text();
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(reader.error || new Error('Could not read file.')); };
+      reader.onload = function () { resolve(String(reader.result || '')); };
+      reader.readAsText(file);
+    });
+  }
+
+  function readAsArrayBuffer(file) {
+    if (file && typeof file.arrayBuffer === 'function') return file.arrayBuffer();
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(reader.error || new Error('Could not read file.')); };
+      reader.onload = function () { resolve(reader.result); };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // Chunking avoids exceeding the argument limit for large images/fonts.
+  function arrayBufferToBase64(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var chunkSize = 0x8000;
+    var binary = '';
+    for (var offset = 0; offset < bytes.length; offset += chunkSize) {
+      var chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+      var part = '';
+      for (var i = 0; i < chunk.length; i += 1) part += String.fromCharCode(chunk[i]);
+      binary += part;
+    }
+    if (typeof btoa !== 'function') throw new Error('This browser cannot encode data URLs (btoa is unavailable).');
+    return btoa(binary);
+  }
+
+  function mimeForFile(file, path) {
+    if (file && file.type) return file.type;
+    return MIME_BY_EXTENSION[extension(path)] || 'application/octet-stream';
+  }
+
+  function cssUnquote(value) {
+    var text = String(value || '').trim();
+    if (text.length >= 2 && ((text.charAt(0) === '"' && text.charAt(text.length - 1) === '"') ||
+        (text.charAt(0) === "'" && text.charAt(text.length - 1) === "'"))) {
+      text = text.slice(1, -1);
+    }
+    // This is deliberately modest: it handles common escaped quote/space paths
+    // without pretending to be a complete CSS tokenizer.
+    return text.replace(/\\([\\'" ])/g, '$1');
+  }
+
+  function skipCssWhitespaceAndComments(text, index) {
+    var cursor = index;
+    while (cursor < text.length) {
+      if (/\s/.test(text.charAt(cursor))) {
+        cursor += 1;
+      } else if (text.slice(cursor, cursor + 2) === '/*') {
+        var end = text.indexOf('*/', cursor + 2);
+        cursor = end === -1 ? text.length : end + 2;
+      } else {
+        break;
+      }
+    }
+    return cursor;
+  }
+
+  function readCssString(text, index) {
+    var quote = text.charAt(index);
+    if (quote !== '"' && quote !== "'") return null;
+    var cursor = index + 1;
+    var value = '';
+    while (cursor < text.length) {
+      var char = text.charAt(cursor);
+      if (char === '\\' && cursor + 1 < text.length) {
+        value += char + text.charAt(cursor + 1);
+        cursor += 2;
+      } else if (char === quote) {
+        return { value: value, end: cursor + 1 };
+      } else {
+        value += char;
+        cursor += 1;
+      }
+    }
+    return null;
+  }
+
+  // Finds a matching close parenthesis while respecting CSS strings/comments.
+  function findCssCloseParen(text, openIndex) {
+    var depth = 1;
+    var quote = '';
+    for (var i = openIndex + 1; i < text.length; i += 1) {
+      var char = text.charAt(i);
+      if (quote) {
+        if (char === '\\') i += 1;
+        else if (char === quote) quote = '';
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        quote = char;
+      } else if (text.slice(i, i + 2) === '/*') {
+        var commentEnd = text.indexOf('*/', i + 2);
+        if (commentEnd === -1) return -1;
+        i = commentEnd + 1;
+      } else if (char === '(') {
+        depth += 1;
+      } else if (char === ')') {
+        depth -= 1;
+        if (!depth) return i;
+      }
+    }
+    return -1;
+  }
+
+  function findCssStatementEnd(text, start) {
+    var quote = '';
+    var depth = 0;
+    for (var i = start; i < text.length; i += 1) {
+      var char = text.charAt(i);
+      if (quote) {
+        if (char === '\\') i += 1;
+        else if (char === quote) quote = '';
+        continue;
+      }
+      if (char === '"' || char === "'") quote = char;
+      else if (text.slice(i, i + 2) === '/*') {
+        var commentEnd = text.indexOf('*/', i + 2);
+        if (commentEnd === -1) return -1;
+        i = commentEnd + 1;
+      } else if (char === '(') depth += 1;
+      else if (char === ')' && depth) depth -= 1;
+      else if (char === ';' && !depth) return i;
+    }
+    return -1;
+  }
+
+  function parseCssImport(statement) {
+    var cursor = skipCssWhitespaceAndComments(statement, 7); // after "@import"
+    if (cursor >= statement.length) return null;
+    var target;
+    var end;
+    var stringValue = readCssString(statement, cursor);
+    if (stringValue) {
+      target = cssUnquote(stringValue.value);
+      end = stringValue.end;
+    } else if (statement.slice(cursor, cursor + 3).toLowerCase() === 'url' &&
+        !/[a-z0-9_-]/i.test(statement.charAt(cursor + 3))) {
+      cursor = skipCssWhitespaceAndComments(statement, cursor + 3);
+      if (statement.charAt(cursor) !== '(') return null;
+      var close = findCssCloseParen(statement, cursor);
+      if (close === -1) return null;
+      target = cssUnquote(statement.slice(cursor + 1, close));
+      end = close + 1;
+    } else {
+      return null;
+    }
+    // `statement` includes its terminating semicolon; it is not a qualifier.
+    return { target: target, qualifiers: statement.slice(end).replace(/;\s*$/, '').trim() };
+  }
+
+  function readLeadingFunction(text, index, name) {
+    var cursor = skipCssWhitespaceAndComments(text, index);
+    if (text.slice(cursor, cursor + name.length).toLowerCase() !== name) return null;
+    var afterName = cursor + name.length;
+    if (/[a-z0-9_-]/i.test(text.charAt(afterName))) return null;
+    cursor = skipCssWhitespaceAndComments(text, afterName);
+    if (text.charAt(cursor) !== '(') return null;
+    var close = findCssCloseParen(text, cursor);
+    if (close === -1) return null;
+    return { value: text.slice(cursor + 1, close).trim(), end: close + 1 };
+  }
+
+  // Preserve the meaningful common @import qualifiers after replacing the import.
+  function wrapImportedCss(css, qualifiers) {
+    var remaining = String(qualifiers || '').trim();
+    if (!remaining) return css;
+    var wrappers = [];
+    var layer = readLeadingFunction(remaining, 0, 'layer');
+    if (layer) {
+      wrappers.push({ type: 'layer', value: layer.value });
+      remaining = remaining.slice(layer.end).trim();
+    } else if (/^layer\b/i.test(remaining)) {
+      wrappers.push({ type: 'layer', value: '' });
+      remaining = remaining.slice(5).trim();
+    }
+    var supports = readLeadingFunction(remaining, 0, 'supports');
+    if (supports) {
+      wrappers.push({ type: 'supports', value: supports.value });
+      remaining = remaining.slice(supports.end).trim();
+    }
+    if (remaining) wrappers.push({ type: 'media', value: remaining });
+    for (var i = wrappers.length - 1; i >= 0; i -= 1) {
+      var wrapper = wrappers[i];
+      if (wrapper.type === 'layer') css = '@layer' + (wrapper.value ? ' ' + wrapper.value : '') + ' {\n' + css + '\n}';
+      else if (wrapper.type === 'supports') {
+        var condition = /^(?:\(|selector\(|font-tech\(|font-format\()/i.test(wrapper.value) ? wrapper.value : '(' + wrapper.value + ')';
+        css = '@supports ' + condition + ' {\n' + css + '\n}';
+      }
+      else css = '@media ' + wrapper.value + ' {\n' + css + '\n}';
+    }
+    return css;
+  }
+
+  function hasLikelyLocalSrcsetCandidate(value) {
+    // We do not rewrite srcset. This small scanner is only for deciding whether
+    // there is an unconverted local candidate; notably, commas inside data: URLs
+    // are consumed as part of the URL rather than mistaken for a new candidate.
+    var text = String(value || '');
+    var cursor = 0;
+    while (cursor < text.length) {
+      while (cursor < text.length && (/[\s,]/.test(text.charAt(cursor)))) cursor += 1;
+      if (cursor >= text.length) break;
+      var start = cursor;
+      var isData = text.slice(cursor, cursor + 5).toLowerCase() === 'data:';
+      while (cursor < text.length && !/\s/.test(text.charAt(cursor)) && (isData || text.charAt(cursor) !== ',')) cursor += 1;
+      var candidate = text.slice(start, cursor);
+      if (!isRemoteOrSpecialUrl(candidate)) return true;
+      // Skip descriptors (for example "2x" or "480w") up to the separator.
+      while (cursor < text.length && text.charAt(cursor) !== ',') cursor += 1;
+      if (text.charAt(cursor) === ',') cursor += 1;
+    }
+    return false;
+  }
+
+  function cssReferences(text) {
+    var refs = [];
+    for (var cursor = 0; cursor < text.length;) {
+      if (text.slice(cursor, cursor + 2) === '/*') {
+        var end = text.indexOf('*/', cursor + 2); cursor = end < 0 ? text.length : end + 2; continue;
+      }
+      if (text.charAt(cursor) === '"' || text.charAt(cursor) === "'") {
+        var string = readCssString(text, cursor); cursor = string ? string.end : text.length; continue;
+      }
+      if (text.slice(cursor, cursor + 7).toLowerCase() === '@import' && !/[a-z0-9_-]/i.test(text.charAt(cursor + 7))) {
+        var statementEnd = findCssStatementEnd(text, cursor + 7);
+        if (statementEnd >= 0) {
+          var imported = parseCssImport(text.slice(cursor, statementEnd + 1));
+          if (imported) refs.push({url:imported.target, kind:'CSS @import'});
+          cursor = statementEnd + 1; continue;
+        }
+      }
+      if (text.slice(cursor, cursor + 3).toLowerCase() === 'url' && !/[a-z0-9_-]/i.test(text.charAt(cursor - 1)) && !/[a-z0-9_-]/i.test(text.charAt(cursor + 3))) {
+        var open = skipCssWhitespaceAndComments(text, cursor + 3);
+        if (text.charAt(open) === '(') {
+          var close = findCssCloseParen(text, open);
+          if (close >= 0) { refs.push({url:cssUnquote(text.slice(open + 1, close)),kind:'CSS url()'}); cursor = close + 1; continue; }
+        }
+      }
+      cursor += 1;
+    }
+    return refs;
+  }
+
+  function srcsetCandidates(text) {
+    var urls = [], cursor = 0;
+    while (cursor < text.length) {
+      while (cursor < text.length && /[\s,]/.test(text.charAt(cursor))) cursor += 1;
+      var start = cursor, data = text.slice(cursor, cursor + 5).toLowerCase() === 'data:';
+      while (cursor < text.length && !/\s/.test(text.charAt(cursor)) && (data || text.charAt(cursor) !== ',')) cursor += 1;
+      if (cursor > start) urls.push(text.slice(start, cursor));
+      while (cursor < text.length && text.charAt(cursor) !== ',') cursor += 1;
+      if (text.charAt(cursor) === ',') cursor += 1;
+    }
+    return urls;
+  }
+
+  // Inspect only the prepared DOM. Inlined nested CSS is already present here;
+  // remote stylesheets/scripts are listed, never fetched or recursively crawled.
+  function describe(html, entryPath) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var externalResources = [], seen = new Set(), base = doc.querySelector('base[href]')?.getAttribute('href') || '';
+    var remoteBase = /^(?:https?:)?\/\//i.test(base) ? new URL(base, 'https://visionflow.invalid/').href : '';
+    function add(raw, kind, reference, baseOverride) {
+      raw = String(raw || '').trim();
+      if (!raw || raw.charAt(0) === '#' || /^(?:data|blob|javascript|vbscript|mailto|tel):/i.test(raw)) return;
+      var resolveBase = baseOverride === undefined ? remoteBase : baseOverride;
+      if (!/^(?:https?:)?\/\//i.test(raw) && (!resolveBase || /^[a-z][a-z0-9+.-]*:/i.test(raw))) return;
+      var url; try { url = new URL(raw, resolveBase || 'https://visionflow.invalid/').href; } catch (_) { return; }
+      if (!/^https?:/i.test(url)) return;
+      var key = JSON.stringify([url, kind, reference]);
+      if (!seen.has(key) && externalResources.length < 2000) {
+        seen.add(key); externalResources.push({url:url,kind:kind,reference:reference});
+      }
+    }
+    var reference = entryPath || 'index.html';
+    if (remoteBase) add(base,'external base',reference,'');
+    doc.querySelectorAll('link[href]').forEach(function (el) {
+      var rel = el.getAttribute('rel') || '';
+      if (/(?:^|\s)(?:stylesheet|icon|apple-touch-icon|preload|modulepreload)(?:\s|$)/i.test(rel)) add(el.getAttribute('href'),'link '+rel,reference);
+    });
+    doc.querySelectorAll('[src],[poster]').forEach(function (el) {
+      ['src','poster'].forEach(function (attr) { if (el.hasAttribute(attr)) add(el.getAttribute(attr),el.tagName.toLowerCase()+' '+attr,reference); });
+    });
+    doc.querySelectorAll('svg image,svg use').forEach(function (el) { add(el.getAttribute('href') || el.getAttribute('xlink:href'),'SVG href',reference); });
+    doc.querySelectorAll('[srcset]').forEach(function (el) { srcsetCandidates(el.getAttribute('srcset')).forEach(function (url) { add(url,el.tagName.toLowerCase()+' srcset',reference); }); });
+    doc.querySelectorAll('style,[style]').forEach(function (el) {
+      var origin = el.getAttribute('data-vf-inlined-stylesheet') || reference + (el.tagName === 'STYLE' ? ' inline <style>' : ' style attribute');
+      cssReferences(el.tagName === 'STYLE' ? el.textContent : el.getAttribute('style')).forEach(function (item) { add(item.url,item.kind,origin); });
+    });
+    return {externalResources:externalResources};
+  }
+
+  function serializeDocument(document) {
+    var prefix = '<!doctype html>';
+    if (document.doctype) {
+      prefix = '<!DOCTYPE ' + document.doctype.name +
+        (document.doctype.publicId ? ' PUBLIC "' + document.doctype.publicId + '"' : '') +
+        (document.doctype.systemId ? ' "' + document.doctype.systemId + '"' : '') + '>';
+    }
+    return prefix + '\n' + document.documentElement.outerHTML;
+  }
+
+  function prepare(files, requestedEntryPath) {
+    return Promise.resolve().then(async function () {
+      var sourceFiles = toArray(files);
+      var warnings = [];
+      var warningSet = new Set();
+      function warn(message) {
+        if (!warningSet.has(message)) {
+          warningSet.add(message);
+          warnings.push(message);
+        }
+      }
+
+      if (!sourceFiles.length) throw new Error('VFFolder.prepare received no files.');
+
+      // `webkitRelativePath` normally starts with the picked directory name.
+      // Strip exactly one common top-level segment so "root index.html" means
+      // index.html, rather than "chosen-folder/index.html".
+      var rawRecords = sourceFiles.map(function (file, index) {
+        var raw = normalizePath((file && file.webkitRelativePath) || (file && file.name) || ('unnamed-' + index));
+        return { file: file, raw: raw };
+      }).filter(function (record) { return record.raw; });
+      if (!rawRecords.length) throw new Error('The supplied files have no usable names.');
+
+      var firstSegments = new Set();
+      var hasRootFile = false;
+      rawRecords.forEach(function (record) {
+        var slash = record.raw.indexOf('/');
+        if (slash === -1) hasRootFile = true;
+        else firstSegments.add(record.raw.slice(0, slash));
+      });
+      var commonTopLevel = !hasRootFile && firstSegments.size === 1 ? Array.from(firstSegments)[0] : '';
+
+      var fileByPath = new Map();
+      var rawToPath = new Map();
+      rawRecords.forEach(function (record) {
+        var path = record.raw;
+        if (commonTopLevel && path.indexOf(commonTopLevel + '/') === 0) path = path.slice(commonTopLevel.length + 1);
+        path = normalizePath(path);
+        rawToPath.set(record.raw, path);
+        if (fileByPath.has(path)) {
+          warn('Duplicate folder path "' + path + '"; the first file will be used.');
+        } else {
+          fileByPath.set(path, record.file);
+        }
+      });
+
+      var htmlPaths = Array.from(fileByPath.keys()).filter(isHtmlPath).sort(function (a, b) {
+        return a.localeCompare(b, undefined, { sensitivity: 'base' });
+      });
+      if (!htmlPaths.length) throw new Error('No .html or .htm file was found in the selected folder.');
+
+      function entryCandidate(value) {
+        if (value === undefined || value === null || value === '') return '';
+        var clean = normalizePath(splitUrl(value).pathname);
+        if (fileByPath.has(clean)) return clean;
+        if (rawToPath.has(clean)) return rawToPath.get(clean);
+        if (commonTopLevel && clean.indexOf(commonTopLevel + '/') === 0) {
+          clean = clean.slice(commonTopLevel.length + 1);
+          if (fileByPath.has(clean)) return clean;
+        }
+        return '';
+      }
+
+      var requested = entryCandidate(requestedEntryPath);
+      var entryPath = requested || (fileByPath.has('index.html') ? 'index.html' : htmlPaths[0]);
+      if (requestedEntryPath && !requested) {
+        warn('Requested entry page "' + requestedEntryPath + '" was not found; using "' + entryPath + '".');
+      }
+      if (!isHtmlPath(entryPath)) {
+        warn('Requested entry path is not an HTML page; using the default HTML page instead.');
+        entryPath = fileByPath.has('index.html') ? 'index.html' : htmlPaths[0];
+      }
+
+      var dataUrlCache = new Map();
+      var textCache = new Map();
+      var cssCache = new Map();
+
+      function getText(path) {
+        if (!textCache.has(path)) textCache.set(path, readAsText(fileByPath.get(path)));
+        return textCache.get(path);
+      }
+
+      function dataUrlFor(path) {
+        if (!dataUrlCache.has(path)) {
+          var file = fileByPath.get(path);
+          dataUrlCache.set(path, readAsArrayBuffer(file).then(function (buffer) {
+            return 'data:' + mimeForFile(file, path) + ';base64,' + arrayBufferToBase64(buffer);
+          }));
+        }
+        return dataUrlCache.get(path);
+      }
+
+      function classifyLocalUrl(rawUrl, baseDirectory) {
+        var raw = String(rawUrl || '').trim();
+        if (isRemoteOrSpecialUrl(raw)) return { local: false };
+        var pieces = splitUrl(raw);
+        if (!pieces.pathname) return { local: false };
+        return {
+          local: true,
+          path: resolveVirtualPath(baseDirectory, pieces.pathname),
+          fragment: pieces.fragment
+        };
+      }
+
+      async function inlineLocalUrl(rawUrl, baseDirectory, reference) {
+        var resolved = classifyLocalUrl(rawUrl, baseDirectory);
+        if (!resolved.local) return null;
+        if (!fileByPath.has(resolved.path)) {
+          warn('Missing local resource "' + rawUrl + '" (resolved as "' + resolved.path + '") in ' + reference + '.');
+          return null;
+        }
+        return (await dataUrlFor(resolved.path)) + resolved.fragment;
+      }
+
+      async function rewriteCssUrls(css, baseDirectory, reference) {
+        var output = '';
+        var cursor = 0;
+        var quote = '';
+        while (cursor < css.length) {
+          var char = css.charAt(cursor);
+          if (quote) {
+            output += char;
+            if (char === '\\' && cursor + 1 < css.length) {
+              output += css.charAt(cursor + 1);
+              cursor += 2;
+              continue;
+            }
+            if (char === quote) quote = '';
+            cursor += 1;
+            continue;
+          }
+          if (char === '"' || char === "'") {
+            quote = char;
+            output += char;
+            cursor += 1;
+            continue;
+          }
+          if (css.slice(cursor, cursor + 2) === '/*') {
+            var commentEnd = css.indexOf('*/', cursor + 2);
+            if (commentEnd === -1) return output + css.slice(cursor);
+            output += css.slice(cursor, commentEnd + 2);
+            cursor = commentEnd + 2;
+            continue;
+          }
+          if (css.slice(cursor, cursor + 3).toLowerCase() === 'url' &&
+              !/[a-z0-9_-]/i.test(css.charAt(cursor - 1)) && !/[a-z0-9_-]/i.test(css.charAt(cursor + 3))) {
+            var afterUrl = skipCssWhitespaceAndComments(css, cursor + 3);
+            if (css.charAt(afterUrl) === '(') {
+              var close = findCssCloseParen(css, afterUrl);
+              if (close !== -1) {
+                var rawValue = cssUnquote(css.slice(afterUrl + 1, close));
+                var inlined = await inlineLocalUrl(rawValue, baseDirectory, reference + ' CSS url()');
+                if (inlined) {
+                  // Always quote emitted data URLs. Base64 itself contains no quote,
+                  // whitespace, or parenthesis and remains valid in CSS.
+                  output += 'url("' + inlined.replace(/"/g, '%22') + '")';
+                  cursor = close + 1;
+                  continue;
+                }
+              }
+            }
+          }
+          output += char;
+          cursor += 1;
+        }
+        return output;
+      }
+
+      async function rewriteCss(css, baseDirectory, sourcePath, ancestry) {
+        // First inline @import rules. Scanning ignores strings/comments and only
+        // treats real @import tokens as candidates.
+        var output = '';
+        var cursor = 0;
+        var quote = '';
+        while (cursor < css.length) {
+          var char = css.charAt(cursor);
+          if (quote) {
+            output += char;
+            if (char === '\\' && cursor + 1 < css.length) {
+              output += css.charAt(cursor + 1);
+              cursor += 2;
+              continue;
+            }
+            if (char === quote) quote = '';
+            cursor += 1;
+            continue;
+          }
+          if (char === '"' || char === "'") {
+            quote = char;
+            output += char;
+            cursor += 1;
+            continue;
+          }
+          if (css.slice(cursor, cursor + 2) === '/*') {
+            var commentEnd = css.indexOf('*/', cursor + 2);
+            if (commentEnd === -1) {
+              output += css.slice(cursor);
+              break;
+            }
+            output += css.slice(cursor, commentEnd + 2);
+            cursor = commentEnd + 2;
+            continue;
+          }
+          if (css.slice(cursor, cursor + 7).toLowerCase() === '@import' &&
+              !/[a-z0-9_-]/i.test(css.charAt(cursor - 1)) && !/[a-z0-9_-]/i.test(css.charAt(cursor + 7))) {
+            var statementEnd = findCssStatementEnd(css, cursor + 7);
+            if (statementEnd !== -1) {
+              var statement = css.slice(cursor, statementEnd + 1);
+              var imported = parseCssImport(statement);
+              if (imported) {
+                var target = classifyLocalUrl(imported.target, baseDirectory);
+                if (target.local) {
+                  if (!fileByPath.has(target.path)) {
+                    warn('Missing local CSS import "' + imported.target + '" (resolved as "' + target.path + '") in "' + sourcePath + '".');
+                    output += statement;
+                  } else if (ancestry.has(target.path)) {
+                    warn('CSS @import cycle detected: ' + Array.from(ancestry).concat([target.path]).join(' -> ') + '. The cyclic import was omitted.');
+                    output += '/* VisionFlow omitted cyclic @import: ' + imported.target.replace(/\*\//g, '') + ' */';
+                  } else {
+                    var childCss = await transformCssFile(target.path, ancestry);
+                    output += '/* VisionFlow inlined @import: ' + target.path + ' */\n' + wrapImportedCss(childCss, imported.qualifiers);
+                  }
+                  cursor = statementEnd + 1;
+                  continue;
+                }
+              }
+            }
+          }
+          output += char;
+          cursor += 1;
+        }
+        return rewriteCssUrls(output, baseDirectory, '"' + sourcePath + '"');
+      }
+
+      function transformCssFile(path, ancestry) {
+        // Check ancestry before cache: a cached in-flight promise can otherwise
+        // reintroduce a circular wait for A.css -> B.css -> A.css.
+        if (ancestry.has(path)) {
+          warn('CSS @import cycle detected at "' + path + '". The cyclic import was omitted.');
+          return Promise.resolve('');
+        }
+        if (cssCache.has(path)) return cssCache.get(path);
+        var nextAncestry = new Set(ancestry);
+        nextAncestry.add(path);
+        var promise = getText(path).then(function (cssText) {
+          return rewriteCss(cssText, dirname(path), path, nextAncestry);
+        });
+        cssCache.set(path, promise);
+        return promise;
+      }
+
+      var entryText = await getText(entryPath);
+      if (typeof DOMParser === 'undefined') {
+        throw new Error('VFFolder.prepare requires DOMParser in a browser environment.');
+      }
+      var document = new DOMParser().parseFromString(entryText, 'text/html');
+      var documentDirectory = dirname(entryPath);
+      var baseDirectory = documentDirectory;
+      var hasExternalBase = false;
+      var baseElement = document.querySelector('base[href]');
+      if (baseElement) {
+        var baseHref = (baseElement.getAttribute('href') || '').trim();
+        if (baseHref && baseHref.charAt(0) !== '#' && !isRemoteOrSpecialUrl(baseHref)) {
+          var basePieces = splitUrl(baseHref);
+          var resolvedBase = resolveVirtualPath(documentDirectory, basePieces.pathname);
+          // A trailing slash denotes a directory; otherwise a base URL names a
+          // file-like endpoint and relative links resolve beside it.
+          baseDirectory = /\/$/.test(basePieces.pathname) ? resolvedBase : dirname(resolvedBase);
+        } else if (baseHref && isRemoteOrSpecialUrl(baseHref) && baseHref.charAt(0) !== '#') {
+          // Preserve external bases unchanged. Relative URLs under them are remote,
+          // so attempting to find them in the picked folder would be incorrect.
+          hasExternalBase = true;
+        }
+      }
+
+      async function inlineHtmlAttribute(element, attribute, reference) {
+        if (hasExternalBase) return;
+        var original = element.getAttribute(attribute);
+        if (original === null || original === '') return;
+        var inlined = await inlineLocalUrl(original, baseDirectory, reference + ' in "' + entryPath + '"');
+        if (inlined) element.setAttribute(attribute, inlined);
+      }
+
+      // A linked stylesheet becomes a real <style>, retaining useful media/title
+      // metadata. CSS imports and nested resource URLs are handled recursively.
+      var stylesheetLinks = Array.prototype.slice.call(document.querySelectorAll('link[href]')).filter(function (link) {
+        return (link.getAttribute('rel') || '').toLowerCase().split(/\s+/).indexOf('stylesheet') !== -1;
+      });
+      for (var linkIndex = 0; linkIndex < stylesheetLinks.length; linkIndex += 1) {
+        var link = stylesheetLinks[linkIndex];
+        if (hasExternalBase) continue;
+        var href = link.getAttribute('href') || '';
+        var cssTarget = classifyLocalUrl(href, baseDirectory);
+        if (!cssTarget.local) continue;
+        if (!fileByPath.has(cssTarget.path)) {
+          warn('Missing local stylesheet "' + href + '" (resolved as "' + cssTarget.path + '") in "' + entryPath + '".');
+          continue;
+        }
+        var style = document.createElement('style');
+        ['media', 'title', 'nonce'].forEach(function (attribute) {
+          if (link.hasAttribute(attribute)) style.setAttribute(attribute, link.getAttribute(attribute));
+        });
+        style.setAttribute('data-vf-inlined-stylesheet', cssTarget.path);
+        style.textContent = await transformCssFile(cssTarget.path, new Set());
+        link.parentNode.replaceChild(style, link);
+      }
+
+      // Existing <style> blocks can also contain @import and url(...).
+      var inlineStyles = document.querySelectorAll('style:not([data-vf-inlined-stylesheet])');
+      for (var styleIndex = 0; styleIndex < inlineStyles.length; styleIndex += 1) {
+        if (!hasExternalBase) {
+          inlineStyles[styleIndex].textContent = await rewriteCss(
+            inlineStyles[styleIndex].textContent || '', baseDirectory, entryPath + ' inline <style>', new Set()
+          );
+        }
+      }
+
+      // Inline CSS url() values in style attributes as well. @import is invalid in
+      // style attributes and is intentionally not processed here.
+      if (!hasExternalBase) {
+        var styledElements = document.querySelectorAll('[style]');
+        for (var styledIndex = 0; styledIndex < styledElements.length; styledIndex += 1) {
+          var styledElement = styledElements[styledIndex];
+          styledElement.setAttribute('style', await rewriteCssUrls(
+            styledElement.getAttribute('style') || '', baseDirectory, 'style attribute in "' + entryPath + '"'
+          ));
+        }
+      }
+
+      // Local visual/media resources. Anchor href values are intentionally absent:
+      // page navigation is a UI concern, not a resource to fetch or inline.
+      var srcSelectors = [
+        'img[src]', 'source[src]', 'video[src]', 'audio[src]', 'track[src]',
+        'input[type="image"][src]', 'image[src]'
+      ].join(',');
+      var srcElements = document.querySelectorAll(srcSelectors);
+      for (var srcIndex = 0; srcIndex < srcElements.length; srcIndex += 1) {
+        await inlineHtmlAttribute(srcElements[srcIndex], 'src', '<' + srcElements[srcIndex].tagName.toLowerCase() + ' src>');
+      }
+      var posterElements = document.querySelectorAll('[poster]');
+      for (var posterIndex = 0; posterIndex < posterElements.length; posterIndex += 1) {
+        await inlineHtmlAttribute(posterElements[posterIndex], 'poster', '<' + posterElements[posterIndex].tagName.toLowerCase() + ' poster>');
+      }
+      var iconLinks = Array.prototype.slice.call(document.querySelectorAll('link[href]')).filter(function (link) {
+        var rel = (link.getAttribute('rel') || '').toLowerCase();
+        return /(?:^|\s)(?:icon|apple-touch-icon)(?:\s|$)/.test(rel);
+      });
+      for (var iconIndex = 0; iconIndex < iconLinks.length; iconIndex += 1) {
+        await inlineHtmlAttribute(iconLinks[iconIndex], 'href', '<link rel="icon" href>');
+      }
+
+      // Keep srcset source text rather than emitting fragile data URLs. A standard
+      // srcset parser is possible, but a naive comma split corrupts data: URLs.
+      var srcsetElements = document.querySelectorAll('[srcset]');
+      for (var srcsetIndex = 0; srcsetIndex < srcsetElements.length; srcsetIndex += 1) {
+        var srcsetElement = srcsetElements[srcsetIndex];
+        if (!hasExternalBase && hasLikelyLocalSrcsetCandidate(srcsetElement.getAttribute('srcset'))) {
+          warn('Local srcset was left unchanged on <' + srcsetElement.tagName.toLowerCase() + '> in "' + entryPath + '" because data URL commas make unsafe parsing unreliable.');
+        }
+      }
+
+      // Convert local external scripts to data URLs without evaluating them, then
+      // make every script tag inert. This also protects against inline scripts.
+      var scripts = document.querySelectorAll('script');
+      var disabledScriptCount = 0;
+      for (var scriptIndex = 0; scriptIndex < scripts.length; scriptIndex += 1) {
+        var script = scripts[scriptIndex];
+        if (script.hasAttribute('src')) await inlineHtmlAttribute(script, 'src', '<script src>');
+        var originalType = script.getAttribute('type');
+        if ((originalType || '').toLowerCase() !== DATA_DISABLED_SCRIPT_TYPE) {
+          script.setAttribute('data-vf-original-type', originalType === null ? 'text/javascript' : originalType);
+          script.setAttribute('type', DATA_DISABLED_SCRIPT_TYPE);
+          disabledScriptCount += 1;
+        }
+      }
+      if (disabledScriptCount) {
+        warn('Disabled ' + disabledScriptCount + ' script tag(s) in the returned HTML; VFFolder.prepare never executes imported JavaScript.');
+      }
+
+      return {
+        html: serializeDocument(document),
+        pages: htmlPaths.map(function (path) { return { path: path, name: basename(path) }; }),
+        entryPath: entryPath,
+        warnings: warnings,
+        externalResources: describe(serializeDocument(document), entryPath).externalResources
+      };
+    });
+  }
+
+  global.VFFolder = global.VFFolder || {};
+  global.VFFolder.prepare = prepare;
+  global.VFFolder.describe = describe;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+  <script>
+'use strict';
+
+const DEFAULT_TOOL_PREFERENCES = {snapEnabled:true, snapGrid:true, activeSnapHover:false};
+const DEFAULT_PANELS = {leftClosed:true, rightClosed:true};
+let panelsBeforeFocus = null;
+let fullscreenTransitionPending = false;
+let layoutRefreshTimer;
+let zoomRevision = 0;
+let fitImportedOnLoad = false;
+let cancelEditorGesture = null;
+
+function normalWorkspacePanels() {
+  if (panelsBeforeFocus) return {...panelsBeforeFocus};
+  const workspace = document.querySelector('.workspace');
+  return {leftClosed:workspace.classList.contains('left-closed'), rightClosed:workspace.classList.contains('right-closed')};
+}
+function restoreWorkspacePanels(panels) {
+  const workspace = document.querySelector('.workspace');
+  if (app.classList.contains('focus-mode')) { panelsBeforeFocus = {...panels}; return; }
+  workspace.classList.toggle('left-closed',panels.leftClosed);
+  workspace.classList.toggle('right-closed',panels.rightClosed);
+}
+function refreshLayoutAndRulers() {
+  clearTimeout(layoutRefreshTimer);
+  invalidateSnapGeometry(); clearSnapFeedback();
+  if (importedMode) updateImportedViewport(); else renderDemo();
+  zoomLabel.textContent = `${Math.round(zoom*100)}%`;
+  updateMeasureLine(); drawRulers();
+}
+function scheduleLayoutRefresh() {
+  clearTimeout(layoutRefreshTimer);
+  layoutRefreshTimer = setTimeout(refreshLayoutAndRulers,180);
+}
+function fitImportedView() {
+  if (!importedMode || !importedFrame) return;
+  updateImportedViewport();
+  const ratio = Math.min((canvasScroll.clientWidth-32)/importedViewport.width, (canvasScroll.clientHeight-32)/importedViewport.height,1);
+  zoom = clamp(Math.round(ratio*100)/100,.1,1);
+  refreshLayoutAndRulers();
+}
+function fitView() {
+  zoomRevision++;
+  if (importedMode) { fitImportedView(); return; }
+  const {width,height} = viewportSize();
+  zoom = clamp(Math.round(Math.min((canvasScroll.clientWidth-32)/width,(canvasScroll.clientHeight-32)/height,1)*100)/100,.1,1);
+  refreshLayoutAndRulers();
+}
+function enterFocusMode() {
+  if (app.classList.contains('focus-mode')) return;
+  panelsBeforeFocus = normalWorkspacePanels();
+  app.classList.add('focus-mode');
+  const workspace = document.querySelector('.workspace');
+  workspace.classList.add('left-closed','right-closed');
+  document.querySelector('#focus-mode').setAttribute('aria-pressed','true');
+  scheduleLayoutRefresh();
+}
+function leaveFocusMode() {
+  const saved = panelsBeforeFocus;
+  app.classList.remove('focus-mode'); panelsBeforeFocus = null;
+  if (saved) restoreWorkspacePanels(saved);
+  document.querySelector('#focus-mode').setAttribute('aria-pressed','false');
+  scheduleLayoutRefresh();
+}
+async function toggleFullscreen() {
+  if (fullscreenTransitionPending) return;
+  if (app.classList.contains('focus-mode') || document.fullscreenElement) {
+    if (!document.fullscreenElement) { leaveFocusMode(); return; }
+    fullscreenTransitionPending = true;
+    try { await document.exitFullscreen(); leaveFocusMode(); }
+    catch { setStatus('瀏覽器未能退出全屏，請按 Esc 或重試退出按鈕。'); }
+    finally { fullscreenTransitionPending = false; }
+    return;
+  }
+  fullscreenTransitionPending = true;
+  enterFocusMode();
+  try {
+    if (!document.documentElement.requestFullscreen) throw new Error('unsupported');
+    await document.documentElement.requestFullscreen();
+  } catch { setStatus('瀏覽器未允許原生全屏，已使用專注檢視；點「退出」即可恢復原面板。'); }
+  finally { fullscreenTransitionPending = false; }
+}
+function registerEditorGesture(cleanup, before = null, beforeHistory = null) {
+  clearTimeout(appearanceAutosaveTimer);
+  gestureBefore=before ?? snapshot();
+  gestureHistory=beforeHistory ?? {history:[...history],future:[...future]};
+  cancelEditorGesture=cleanup;
+}
+function cancelTransientTools() {
+  const cleanup=cancelEditorGesture; cancelEditorGesture=null; cleanup?.();
+  snapDragActive=false; guideDrag=null; isPanning=false; isErasing=false;isMarquee=false;marquee.style.display='none';
+  suppressImportedClick=false; selectedManualGuide=null;
+  app.classList.remove('panning'); clearSnapFeedback(); invalidateSnapGeometry();
+}
+function persistedMeasure() {
+  const done = measureState === 'done';
+  return {enabled:measureMode,state:done?'done':'idle',start:done?{...measureStart}:{x:0,y:0},end:done?{...measureEnd}:{x:0,y:0}};
+}
+function readDraftSnapshot(value) {
+  const s = JSON.parse(value);
+  if (!s || ![1,2].includes(s.version) || !Array.isArray(s.items))
+    throw new Error('不支援或損壞的草稿版本；原始草稿仍保留，可下載備份。');
+  s.items.forEach(validateCanvasBackground); // Also validate optional texture fields in legacy v1 drafts.
+  if(s.importReport !== undefined)validateImportReport(s.importReport);
+  if (s.version === 1) {
+    s.toolPreferences = {...DEFAULT_TOOL_PREFERENCES};
+    s.measure = {enabled:!!s.measureMode,state:'idle',start:{x:0,y:0},end:{x:0,y:0}};
+    s.workspacePanels = {...DEFAULT_PANELS};
+    // Old snapshots could have mutually inconsistent booleans. Preserve one mode.
+    s.panMode = !s.measure.enabled && !!s.panMode;
+    s.eraserMode = !s.measure.enabled && !s.panMode && !!s.eraserMode;
+  } else {
+    const pref=s.toolPreferences, m=s.measure, panels=s.workspacePanels;
+    const arrays=['items','selectedIds','manualGuides','hiddenDemoGuideKeys','demoGuideTargets','importedManualGuides','hiddenImportedGuideKeys','importedGuideTargets','selectedTargets','groups','folderPagePaths'];
+    if (typeof s.importedMode!=='boolean' || arrays.some(k=>!Array.isArray(s[k])) ||
+        ['importedHtml','importedSourceHtml','importedPreparedHtml','staticPreviewHtml','appearanceNotes','folderSetKey'].some(k=>typeof s[k]!=='string') ||
+        !s.appearanceSource || typeof s.appearanceSource!=='object' || Array.isArray(s.appearanceSource) ||
+        !s.appearanceRecords || typeof s.appearanceRecords!=='object' || Array.isArray(s.appearanceRecords) ||
+        (s.pageSessions !== undefined && (!s.pageSessions || typeof s.pageSessions!=='object' || Array.isArray(s.pageSessions))) ||
+        (s.importedMode && (!s.importedHtml || !s.importedSourceHtml)))
+      throw new Error('草稿來源／圖層／工作集合資料不完整。');
+    if (s.importedMode) {
+      validateAppearanceOrigin(appearanceOrigin(s.appearanceSource));
+      if (typeof s.appearanceSource.page!=='string' || typeof s.appearanceSource.htmlFile!=='string')
+        throw new Error('草稿來源路徑無效。');
+      validateAppearanceData({format:'visionflow-appearance-v1',source:s.appearanceSource,changes:Object.values(s.appearanceRecords),userNotes:s.appearanceNotes});
+    }
+    if (s.folderPagePaths.some(path=>typeof path!=='string' || path.length>4096) || Object.values(s.pageSessions||{}).some(raw=>typeof raw!=='string'))
+      throw new Error('草稿入口／頁面快照資料無效。');
+    if (!pref || ['snapEnabled','snapGrid','activeSnapHover'].some(k=>typeof pref[k]!=='boolean') ||
+        !panels || ['leftClosed','rightClosed'].some(k=>typeof panels[k]!=='boolean') ||
+        !m || typeof m.enabled!=='boolean' || !['idle','measuring','done'].includes(m.state) ||
+        typeof s.panMode!=='boolean' || typeof s.eraserMode!=='boolean' || typeof s.measureMode!=='boolean' ||
+        s.measureMode!==m.enabled || Number(m.enabled)+Number(s.panMode)+Number(s.eraserMode)>1)
+      throw new Error('草稿工具／面板／量尺狀態不完整或操作模式不一致。');
+    for (const point of [m.start,m.end]) if (!point || ['x','y'].some(k=>!Number.isFinite(point[k]) || Math.abs(point[k])>100000))
+      throw new Error('草稿量尺座標無效。');
+    if (!Number.isFinite(s.zoom) || s.zoom<.1 || s.zoom>1.5 || !Object.prototype.hasOwnProperty.call(VIEWPORT_PRESETS,s.viewportMode))
+      throw new Error('草稿縮放／視口無效。');
+    if (m.state !== 'done') s.measure={enabled:m.enabled,state:'idle',start:{x:0,y:0},end:{x:0,y:0}};
+  }
+  return s;
+}
+function restoredDraftMessage() {
+  const entry = importedMode && !folderFiles.length && folderPagePaths.length>1 ? '已恢復目前靜態頁；切換原入口需重選原資料夾，各頁修改仍保留。' : '已從此瀏覽器恢復靜態外觀草稿。';
+  return entry+'脚本停用；如需功能預覽，請重新啟用可信原始程式。';
+}
+</script>
+  <script>
+'use strict';
+
+// All editor geometry is in unscaled artboard / source-document pixels.
+let boxSelectMode = false;
+let isMarquee = false;
+let gestureBefore = null;
+let gestureHistory = null;
+const pointerClickHandled = new WeakMap();
+const boundWorkspaces = new WeakSet();
+const marquee = document.getElementById('selection-marquee');
+
+function sourceDocument(event) { return event.target?.ownerDocument || document; }
+function pointerDocumentPoint(event, doc = sourceDocument(event)) {
+  if (doc !== document) return {x:event.clientX + doc.defaultView.scrollX, y:event.clientY + doc.defaultView.scrollY};
+  const rect = artboard.getBoundingClientRect();
+  return {x:(event.clientX - rect.left)/zoom, y:(event.clientY - rect.top)/zoom};
+}
+function pointerHostPoint(event, doc = sourceDocument(event)) {
+  if (doc === document) return {x:event.clientX,y:event.clientY};
+  const rect = importedFrame.getBoundingClientRect();
+  return {x:rect.left + event.clientX*zoom,y:rect.top + event.clientY*zoom};
+}
+function documentRect(element) {
+  const r=element.getBoundingClientRect(), win=element.ownerDocument.defaultView;
+  return {left:r.left+win.scrollX,top:r.top+win.scrollY,right:r.right+win.scrollX,bottom:r.bottom+win.scrollY,width:r.width,height:r.height};
+}
+function helperRoot(doc) {
+  let root=doc.querySelector('[data-vf-helper="root"]');
+  if (!root) {
+    root=doc.createElement('div');root.dataset.vfHelper='root';
+    for(const [key,value] of Object.entries({position:'absolute',left:'0px',top:'0px',width:'0px',height:'0px',margin:'0px',padding:'0px',border:'0px',overflow:'visible','pointer-events':'none','z-index':'2147483646'}))root.style.setProperty(key,value,'important');
+    doc.documentElement.appendChild(root);
+  }
+  return root;
+}
+function setImportedSelection(elements) {
+  importedSelectedElements=importedSelectionWithGroups([...new Set(elements.filter(isCandidate))]);
+  importedSelected=importedSelectedElements[0]||null;
+  importedSelectedElements.forEach(syncStateContext);
+  if(guideArmed && importedSelectedElements.length===1){importedGuideTargets=[...new Set([...importedGuideTargets,importedSelected])];guideArmed=false;guideMode='live';guidesVisible=true;renderImportedGuides();updateToolButtons();}
+  updateImportedOverlay();renderLayers();updateGroupButtonState();if(!isTyping)renderImportedInspector();scheduleAppearanceSave();
+}
+function commitSelection(value, additive=false, toggle=false) {
+  const members=importedMode ? importedSelectionWithGroups([value]) : items.filter(i=>i.id===value || (items.find(x=>x.id===value)?.groupId && i.groupId===items.find(x=>x.id===value).groupId)).map(i=>i.id);
+  const current=importedMode?importedSelectedElements:selectedIds;
+  const selected=current.includes(value);
+  const next=additive ? (toggle && selected ? current.filter(x=>!members.includes(x)) : [...new Set([...current,...members])]) : members;
+  if(importedMode)setImportedSelection(next);else{setDemoSelection(next);renderLayers();if(!isTyping)renderDemoInspector();}
+}
+function preparePointerSelection(event,value) {
+  pointerClickHandled.set(sourceDocument(event),true);
+  const current=importedMode?importedSelectedElements:selectedIds;
+  if(event.ctrlKey || event.metaKey){commitSelection(value,true,true);return (importedMode?importedSelectedElements:selectedIds).includes(value);}
+  if(!current.includes(value))commitSelection(value);
+  return true;
+}
+function clickSelection(event,value) {
+  if(sourceDocument(event)!==document && (eraserMode || panMode || measureMode || boxSelectMode))return;
+  commitSelection(value,event.ctrlKey || event.metaKey,true);
+  if(!importedMode)renderDemo();
+}
+function abortPointerGesture() {
+  const raw=cancelEditorGesture?gestureBefore:null, oldHistory=gestureHistory;
+  cancelTransientTools();gestureBefore=null;gestureHistory=null;
+  if(raw){restoreSnapshot(raw);if(oldHistory){history=oldHistory.history;future=oldHistory.future;updateHistoryButtons();}}
+  if(measureState==='measuring'){measureState='idle';measureStart={x:0,y:0};measureEnd={x:0,y:0};updateMeasureLine();}
+  isMarquee=false;marquee.style.display='none';
+}
+function runPointerGesture(event,doc,move,finish) {
+  const capture=doc.documentElement;
+  try{capture.setPointerCapture(event.pointerId);}catch{}
+  function stop(e={cancelled:true}) {
+    if(!e.cancelled && e.pointerId!==event.pointerId)return;
+    doc.removeEventListener('pointermove',onMove,true);doc.removeEventListener('pointerup',stop,true);
+    cancelEditorGesture=null;
+    try{capture.releasePointerCapture(event.pointerId);}catch{}
+    finish(e);if(!e.cancelled)scheduleAppearanceSave();
+  }
+  function onMove(e){if(e.pointerId!==event.pointerId)return;e.preventDefault();move(e);}
+  doc.addEventListener('pointermove',onMove,true);doc.addEventListener('pointerup',stop,true);
+  registerEditorGesture(()=>stop({cancelled:true}));
+}
+function beginPan(event,doc) {
+  const start=pointerHostPoint(event,doc), scroll={x:canvasScroll.scrollLeft,y:canvasScroll.scrollTop};
+  isPanning=true;app.classList.add('panning');
+  runPointerGesture(event,doc,e=>{const point=pointerHostPoint(e,doc);canvasScroll.scrollLeft=scroll.x-(point.x-start.x);canvasScroll.scrollTop=scroll.y-(point.y-start.y);},()=>{isPanning=false;app.classList.remove('panning');drawRulers();});
+}
+function measurePoint(event,doc) {
+  const p=pointerDocumentPoint(event,doc);
+  return event.altKey?{...p,snapped:false}:resolveSnap(p.x,p.y,snapGeometry([],true));
+}
+function finishMeasure(event,doc) {
+  const p=measurePoint(event,doc);
+  if(measureState==='measuring'){measureEnd={x:p.x,y:p.y};measureState='done';setStatus('尺寸已鎖定。關閉量尺仍保持結果；再點畫布開始新量度。');}
+  else{measureStart={x:p.x,y:p.y};measureEnd={...measureStart};measureState='measuring';}
+  updateMeasureLine();scheduleAppearanceSave();
+}
+function updatePointerFeedback(event,doc) {
+  if(snapDragActive || isPanning || isMarquee || isErasing || guideDrag)return;
+  if(!measureMode && !activeSnapHover)return;
+  const p=measurePoint(event,doc);
+  if(p.snapped)drawSnapFeedback(p);else clearSnapFeedback();
+  if(measureMode && measureState==='measuring'){measureEnd={x:p.x,y:p.y};updateMeasureLine();}
+}
+function beginMarquee(event,doc) {
+  const start=pointerHostPoint(event,doc), original=importedMode?[...importedSelectedElements]:[...selectedIds];
+  let end=start;
+  isMarquee=true;marquee.style.display='block';
+  const display=()=>Object.assign(marquee.style,{left:Math.min(start.x,end.x)+'px',top:Math.min(start.y,end.y)+'px',width:Math.abs(end.x-start.x)+'px',height:Math.abs(end.y-start.y)+'px'});
+  display();
+  runPointerGesture(event,doc,e=>{end=pointerHostPoint(e,doc);display();},e=>{
+    isMarquee=false;marquee.style.display='none';if(e.cancelled)return;
+    const box={left:Math.min(start.x,end.x),top:Math.min(start.y,end.y),right:Math.max(start.x,end.x),bottom:Math.max(start.y,end.y)};
+    const candidates=importedMode ? importedLayers.map(l=>l.element) : [...artboard.querySelectorAll('.demo-item')];
+    const found=[];
+    if(box.right-box.left>=4 || box.bottom-box.top>=4)for(const el of candidates){
+      const r=el.getBoundingClientRect(), style=el.ownerDocument.defaultView.getComputedStyle(el);
+      if(!r.width || !r.height || style.visibility==='hidden' || style.display==='none')continue;
+      const fr=importedMode?importedFrame.getBoundingClientRect():null;
+      const view=fr?{left:fr.left+r.left*zoom,top:fr.top+r.top*zoom,right:fr.left+r.right*zoom,bottom:fr.top+r.bottom*zoom}:r;
+      if(view.left>=box.left-.5 && view.right<=box.right+.5 && view.top>=box.top-.5 && view.bottom<=box.bottom+.5)found.push(importedMode?el:el.dataset.id);
+    }
+    const next=event.ctrlKey || event.metaKey?[...new Set([...original,...found])]:found;
+    if(importedMode)setImportedSelection(next);else{setDemoSelection(next);renderDemo();renderDemoInspector();}
+    setStatus(`已框選 ${next.length} 個圖層；右側列表可逐件選取，外觀欄位可批量套用。`);
+  });
+}
+function guideSegmentHits(a,b,guide,tolerance) {
+  const axis=guide.kind==='vertical'?'x':'y';
+  return guide.position>=Math.min(a[axis],b[axis])-tolerance && guide.position<=Math.max(a[axis],b[axis])+tolerance;
+}
+function beginErase(event,doc) {
+  let previous=pointerDocumentPoint(event,doc), changed=false;
+  isErasing=true;
+  const erase=(next)=>{
+    const manual=importedMode?importedManualGuides:manualGuides, hidden=importedMode?hiddenImportedGuideKeys:hiddenDemoGuideKeys;
+    const hits=manual.filter(g=>guideSegmentHits(previous,next,g,7/zoom));
+    const targets=importedMode?importedGuideTargets:items.filter(i=>demoGuideTargets.includes(i.id));
+    const keys=[];
+    for(const el of targets){const r=importedMode?documentRect(el):{left:el.x,top:el.y,right:el.x+el.w,bottom:el.y+el.h};const id=importedMode?(importedElementIds.get(el)||ensureImportedState(el).target.selector):el.id;
+      for(const [edge,kind,position] of [['left','vertical',r.left],['right','vertical',r.right],['center-x','vertical',(r.left+r.right)/2],['top','horizontal',r.top],['bottom','horizontal',r.bottom],['center-y','horizontal',(r.top+r.bottom)/2]]){
+        const key=id+':'+edge;if(!hidden.includes(key)&&guideSegmentHits(previous,next,{kind,position},7/zoom))keys.push(key);
+      }
+    }
+    if(hits.length || keys.length){if(!changed){savePoint();changed=true;}const keep=manual.filter(g=>!hits.includes(g));if(importedMode)importedManualGuides=keep;else manualGuides=keep;hidden.push(...keys);selectedManualGuide=null;if(importedMode)renderImportedGuides();else renderGuides();}
+    previous=next;
+  };
+  runPointerGesture(event,doc,e=>erase(pointerDocumentPoint(e,doc)),e=>{isErasing=false;if(!e.cancelled && changed)setStatus('已連續擦除參考線；可一次復原整個擦除手勢。');});
+  erase(previous);
+}
+function bindPointerWorkspace(doc) {
+  if(boundWorkspaces.has(doc))return;boundWorkspaces.add(doc);
+  doc.addEventListener('pointerdown',event=>{
+    if(doc!==document && doc!==importedFrame?.contentDocument)return;
+    pointerClickHandled.delete(doc);
+    if(doc===document && !event.target.closest?.('#canvas-scroll'))return;
+    if(event.button!==0)return;
+    if(cancelEditorGesture){event.preventDefault();event.stopImmediatePropagation();return;}
+    let action=null;
+    if(panMode)action=beginPan;
+    else if(measureMode){pointerClickHandled.set(doc,true);event.preventDefault();event.stopImmediatePropagation();finishMeasure(event,doc);return;}
+    else if(eraserMode)action=beginErase;
+    else if(editing && (boxSelectMode || (doc===document?!event.target.closest('.demo-item,.resize-handle,.guide-line'):event.target===doc.body || event.target===doc.documentElement)))action=beginMarquee;
+    if(action){pointerClickHandled.set(doc,true);event.preventDefault();event.stopImmediatePropagation();action(event,doc);}
+  },true);
+  doc.addEventListener('pointermove',event=>{if(doc!==document || event.target.closest?.('#canvas-scroll'))updatePointerFeedback(event,doc);},true);
+  doc.addEventListener('click',event=>{
+    if((doc!==document || event.target.closest?.('#canvas-scroll')) && (pointerClickHandled.has(doc) || panMode || measureMode || eraserMode || boxSelectMode)){
+      pointerClickHandled.delete(doc);event.preventDefault();event.stopImmediatePropagation();
+    }
+  },true);
+  doc.addEventListener('pointercancel',()=>{if(cancelEditorGesture || measureState==='measuring')abortPointerGesture();},true);
+  doc.addEventListener('lostpointercapture',()=>{if(cancelEditorGesture)abortPointerGesture();},true);
+  doc.defaultView.addEventListener('blur',()=>{if(cancelEditorGesture || measureState==='measuring')abortPointerGesture();});
+  doc.addEventListener('keydown',e=>{if(e.key==='Escape' && (cancelEditorGesture || measureState==='measuring')){e.preventDefault();abortPointerGesture();}},true);
+}
+function choosePointerTool(kind) {
+  abortPointerGesture();
+  const enabled=kind==='pan'?!panMode:kind==='measure'?!measureMode:kind==='erase'?!eraserMode:!boxSelectMode;
+  panMode=kind==='pan'&&enabled;measureMode=kind==='measure'&&enabled;eraserMode=kind==='erase'&&enabled;boxSelectMode=kind==='box'&&enabled;
+  if(measureMode || panMode){measureState='idle';measureStart={x:0,y:0};measureEnd={x:0,y:0};}
+  updateToolButtons();if(importedMode)renderImportedGuides();else renderGuides();
+  setStatus(enabled?({pan:'平移：按住畫布拖動檢視，不改元件位置。',measure:'量尺：點擊起點及終點；尺寸以原頁面像素計算，Alt 暫停吸附。',erase:'擦膠：按住掃過參考線；一次手勢可一次復原。',box:'框選：拖動矩形完整包住圖層，Ctrl/⌘ 可追加；包括遮擋與嵌套圖層。'}[kind]):'工具已關閉。');scheduleAppearanceSave();
+}
+
+bindPointerWorkspace(document);
+
+function renderBatchInspector() {
+  const selected=importedMode?importedSelectedElements:selectedDemoItems();
+  const values=selected.map(el=>importedMode?syncStateContext(el):el);
+  const descriptors=[['batch-bg','背景色','color','colorOverride','color'],['batch-color','文字颜色','color','textColor','textColor'],['batch-size','文字大小 (px)','number','fontSize','fontSize'],['batch-radius','圆角 (px)','number','borderRadius','borderRadius'],['batch-border','边框粗细 (px)','number','borderWidth','borderWidth'],['batch-border-color','边框颜色','color','borderColor','borderColor']];
+  let fields='';
+  for(const [id,label,type,importKey,demoKey] of descriptors){
+    const list=values.map(v=>id==='batch-bg'?(importedMode?(v.colorOverride||v.originalColor):v.color):v[importedMode?importKey:demoKey]);
+    const same=list.every(v=>v===list[0]);const value=type==='color'?rgbToHex(list[0]):same?list[0]:'';
+    fields+=`<div class="field"><label for="${id}">${label}${same?'':'（混合）'}</label><input id="${id}" type="${type}" ${type==='number'?'min="0" max="10000"':''} value="${escapeHtml(value??'')}" placeholder="混合值" title="只修改这一栏；其他样式各自保留"></div>`;
+  }
+  const families=values.map(v=>v.fontFamily),sameFont=families.every(v=>v===families[0]);
+  fields+=`<div class="field full"><label for="batch-font">字體${sameFont?'':'（混合）'}</label><select id="batch-font">${sameFont?'':'<option value="" selected disabled>混合值</option>'}${availableFonts.map(f=>`<option ${sameFont&&f===families[0]?'selected':''}>${escapeHtml(f)}</option>`).join('')}</select></div>`;
+  fields+='<div class="field full"><label for="batch-shadow">投影</label><select id="batch-shadow"><option value="" selected disabled>保持各自投影</option><option value="on">开启各自投影</option><option value="off">关闭投影</option></select></div>';
+  inspector.innerHTML=renderMultiSelectInfo()+alignmentTools()+`<section class="section"><h2 class="panel-title">批量外观 · ${selected.length} 个图层</h2><p class="hint">仅修改操作的字段；混合值不会自动统一。群组只整体移动，不提供比例缩放。点击上方列表可编辑单件${importedMode?'；文字内容及业务仍受保护':''}。</p><div class="form-grid">${fields}</div></section>`;
+}
+let batchFieldDirty=false;
+function updateBatchAppearance(event,commit) {
+  if(!event.target.id.startsWith('batch-'))return false;
+  const field=event.target, map={
+    'batch-bg':['background-color','color'], 'batch-color':['color','textColor'], 'batch-size':['font-size','fontSize'],
+    'batch-radius':['border-radius','borderRadius'], 'batch-border':['border-width','borderWidth'], 'batch-border-color':['border-color','borderColor'], 'batch-font':['font-family','fontFamily']
+  };
+  if(!map[field.id] && field.id!=='batch-shadow')return true;
+  if(importedMode && importedSelectedElements.some(el=>recordFor(el,false)?.scope==='all-matching')){setStatus('批量编辑仅作用于选中图层。请先将已有「所有匹配元素」记录改回「仅此元素」，再批量修改。');return true;}
+  if(field.type==='number' && (field.value==='' || !Number.isFinite(Number(field.value))))return true;
+  const numeric=field.type==='number';const value=numeric?clamp(Number(field.value),field.id==='batch-size'?1:0,10000):field.value;
+  if(!batchFieldDirty)savePoint();batchFieldDirty=!commit;
+  if(importedMode){
+    for(const el of importedSelectedElements){
+      const rec=recordFor(el), state=syncStateContext(el);
+      if(field.id==='batch-shadow')rec.styles['box-shadow']=value==='on'?shadowCss(state.shadowParts):'none';
+      else{const [css]=map[field.id];rec.styles[css]=`${value}${numeric?'px':''}`;}
+      state.context='';
+    }
+    refreshAppearanceStyles();importedSelectedElements.forEach(syncStateContext);updateImportedOverlay();renderImportedGuides();
+  }else{
+    for(const item of selectedDemoItems()){
+      if(field.id==='batch-shadow')item.shadow=value==='on';
+      else{item[map[field.id][1]]=value;if(field.id==='batch-radius')item.customBorderRadius=null;}
+    }
+    renderDemo();
+  }
+  scheduleAppearanceSave();if(commit)renderBatchInspector();return true;
+}
+</script>
+  <script>
+'use strict';
+
+const BACKGROUND_DATA_LIMIT = 2 * 1024 * 1024;
+const BACKGROUND_KEYS = ['background-image','background-size','background-position','background-repeat'];
+const TEXTURE_PRESETS = {
+  linen: {label:'麻布織紋（布料）', image:'repeating-linear-gradient(0deg, rgba(117, 87, 54, .10) 0px, rgba(117, 87, 54, .10) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(90deg, rgba(255, 255, 255, .45) 0px, rgba(255, 255, 255, .45) 1px, transparent 1px, transparent 4px)', size:'4px 4px, 4px 4px'},
+  paper: {label:'紙張纖維（紙感）', image:'radial-gradient(circle at 20% 25%, rgba(131, 95, 54, .10) 0px, transparent 1px), radial-gradient(circle at 70% 65%, rgba(131, 95, 54, .08) 0px, transparent 1px), repeating-linear-gradient(0deg, rgba(141, 108, 69, .035) 0px, rgba(141, 108, 69, .035) 1px, transparent 1px, transparent 6px)', size:'12px 12px, 17px 17px, 100% 100%'},
+  sandstone: {label:'砂岩顆粒（沙石）', image:'repeating-radial-gradient(circle at 27% 32%, rgba(115, 79, 38, .16) 0px, transparent .8px, transparent 3px), repeating-linear-gradient(115deg, rgba(125, 91, 48, .06) 0px, rgba(125, 91, 48, .06) 1px, transparent 1px, transparent 5px)', size:'11px 11px, 9px 9px'},
+  stone: {label:'粗石斑駁（混凝土）', image:'radial-gradient(ellipse at 25% 30%, rgba(65, 75, 81, .16) 0px, transparent 44%), radial-gradient(ellipse at 70% 74%, rgba(255, 255, 255, .40) 0px, transparent 48%), repeating-linear-gradient(12deg, rgba(70, 78, 82, .055) 0px, rgba(70, 78, 82, .055) 1px, transparent 1px, transparent 7px)', size:'19px 17px, 23px 21px, 7px 7px'}
+};
+function texturePresetId(image) {
+  const normalize=value=>{const probe=document.createElement('div');probe.style.backgroundImage=value;return probe.style.backgroundImage;};
+  const current=normalize(image);
+  return Object.entries(TEXTURE_PRESETS).find(([,preset])=>normalize(preset.image)===current)?.[0]||'';
+}
+let backgroundRequestSequence = 0;
+let pendingBackgroundRequest = null;
+function cancelBackgroundUpload() { backgroundRequestSequence++; }
+function rasterMime(bytes) {
+  if ([137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)) return 'image/png';
+  if (bytes[0]===255 && bytes[1]===216 && bytes[2]===255) return 'image/jpeg';
+  if (String.fromCharCode(...bytes.slice(0,4))==='RIFF' && String.fromCharCode(...bytes.slice(8,12))==='WEBP') return 'image/webp';
+  return null;
+}
+function safeRasterDataUrl(value) {
+  if(typeof value!=='string' || value.length>BACKGROUND_DATA_LIMIT)return false;
+  const match=value.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+  if(!match || match[2].length%4)return false;
+  try { return rasterMime(Uint8Array.from(atob(match[2].slice(0,32)),c=>c.charCodeAt(0)))===match[1]; }
+  catch { return false; }
+}
+function safeBackgroundImage(value) {
+  const match=typeof value==='string' && value.match(/^url\("(data:[^"]+)"\)$/);
+  return !!match && safeRasterDataUrl(match[1]);
+}
+function safeAppearanceStyle(key,value) {
+  if(!STYLE_ALLOWLIST.has(key) || typeof value!=='string')return false;
+  if(key==='background-image' && safeBackgroundImage(value))return true;
+  // A narrowly validated raster URL is the only URL exception. Escapes are not
+  // accepted here, so an escaped url()/rule boundary can't bypass the checks.
+  if(/[;{}<>\\\u0000-\u001f]|url\s*\(|expression\s*\(/i.test(value))return false;
+  if(key==='background-image' && value!=='none' && !/^(?:repeating-)?(?:linear|radial|conic)-gradient\(/i.test(value))return false;
+  return CSS.supports(key,value);
+}
+async function readBackgroundFile(file) {
+  if(file.size>10*1024*1024)throw new Error('圖片超過10MiB；請先縮小檔案。');
+  const mime=rasterMime(new Uint8Array(await file.slice(0,32).arrayBuffer()));
+  if(!mime)throw new Error('只支援真正的PNG、JPEG或WebP圖片，不接受SVG、GIF或偽裝檔案。');
+  const blobUrl=URL.createObjectURL(file),image=new Image();
+  try {
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('圖片無法解碼，原背景未更改。'));image.src=blobUrl;});
+    const width=image.naturalWidth,height=image.naturalHeight;
+    if(!width || !height || Math.max(width,height)>12000 || width*height>36000000)throw new Error('圖片尺寸過大（上限12000px／36MP）；請先縮小。');
+    let data;
+    if(Math.max(width,height)<=2048 && file.size<BACKGROUND_DATA_LIMIT*.7) data=await fileAsDataUrl(new File([file],'background',{type:mime}));
+    else {
+      const ratio=Math.min(1,2048/Math.max(width,height)),canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));
+      const context=canvas.getContext('2d');if(!context)throw new Error('瀏覽器無法建立圖片畫布。');
+      context.drawImage(image,0,0,canvas.width,canvas.height);data=canvas.toDataURL('image/webp',.9);
+    }
+    if(!safeRasterDataUrl(data))throw new Error('處理後圖片仍超過2MiB，或格式不受支援；請縮小後重試。');
+    return data;
+  } finally {image.src='';URL.revokeObjectURL(blobUrl);}
+}
+function backgroundSettings() {
+  if(importedMode && importedSelected) {
+    const css=importedSelected.ownerDocument.defaultView.getComputedStyle(importedSelected);
+    return {image:css.backgroundImage,size:css.backgroundSize,position:css.backgroundPosition,repeat:css.backgroundRepeat};
+  }
+  const item=selectedDemo();return {image:item?.backgroundImage||'none',size:item?.backgroundSize||'cover',position:item?.backgroundPosition||'50% 50%',repeat:item?.backgroundRepeat||'no-repeat'};
+}
+function backgroundInspectorFields() {
+  const settings=backgroundSettings(),hasImage=settings.image.includes('url('),textureId=texturePresetId(settings.image),texture=TEXTURE_PRESETS[textureId];
+  const sized=settings.size.match(/^(\d+(?:\.\d+)?)%\s*(?:auto)?$/),mode=['cover','contain'].includes(settings.size)?settings.size:sized?'custom':'keep';
+  const position=settings.position.match(/^(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)%$/);
+  const x=position?clamp(Number(position[1]),0,100):50,y=position?clamp(Number(position[2]),0,100):50;
+  return `<section class="section" id="bg-panel"><h2 class="panel-title">背景圖片／材質</h2>
+    <p class="hint">${texture?'目前使用內建「'+texture.label+'」材質；透明紋理會保留底色。':hasImage?'目前已有背景圖片；可直接調整大小、位置或更換。':'為選取標題／容器加背景，不修改其文字或前景圖片。'}${splitCssList(settings.image).length>1?'多層背景：尺寸／位置作用於所有背景層；更換會替換整組圖片／漸層／材質。':''}</p>
+    <div class="field full"><label for="bg-texture">內建材質（套用後取代目前背景圖片／漸層）</label><select id="bg-texture"><option value="">選擇材質…</option>${Object.entries(TEXTURE_PRESETS).map(([id,preset])=>`<option value="${id}" ${textureId===id?'selected':''}>${preset.label}</option>`).join('')}</select></div>
+    <p class="hint">麻布、紙感、砂岩及粗石均以 CSS 即時繪製，無須另找圖片；紋理會透出底色。要鋪滿整張畫布，選取全尺寸背景容器再套用。</p>
+    <label class="field full" for="bg-image-file">上傳／更換圖片<input id="bg-image-file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+    <p class="hint">PNG／JPEG／WebP，最多10MiB；大圖按原比例縮到長邊2048px，必要時轉WebP。內嵌最多2MiB，不修改原檔或上傳雲端。</p>
+    <div class="form-grid"><div class="field full"><label for="bg-size">貼圖顯示</label><select id="bg-size"><option value="keep" ${mode==='keep'?'selected':''}>保持目前尺寸</option><option value="cover" ${mode==='cover'?'selected':''}>填滿（Cover，可能裁掉邊緣）</option><option value="contain" ${mode==='contain'?'selected':''}>完整顯示（Contain，可能留白）</option><option value="custom" ${mode==='custom'?'selected':''}>自訂圖片寬度比例</option></select></div>
+    <div class="field full"><label for="bg-scale">圖片寬度比例（10–400%）</label><input id="bg-scale" type="number" min="10" max="400" value="${sized?sized[1]:100}" ${mode==='custom'?'':'disabled'}></div>
+    <div class="field"><label for="bg-x">水平位置（0左／50中／100右）</label><input id="bg-x" type="range" min="0" max="100" value="${x}" ${hasImage?'':'disabled'}></div>
+    <div class="field"><label for="bg-y">垂直位置（0上／50中／100下）</label><input id="bg-y" type="range" min="0" max="100" value="${y}" ${hasImage?'':'disabled'}></div>
+    <div class="field full"><label for="bg-repeat">貼圖重複</label><select id="bg-repeat">${[['keep','保持目前方式'],['no-repeat','不重複'],['repeat','橫直重複（紋理）'],['repeat-x','只橫向重複'],['repeat-y','只垂直重複']].map(([value,label])=>`<option value="${value}" ${(settings.repeat===value || value==='keep'&&!['no-repeat','repeat','repeat-x','repeat-y'].includes(settings.repeat))?'selected':''}>${label}</option>`).join('')}</select></div></div>
+    <div style="display:flex;gap:6px;margin-top:8px"><button class="button" data-bg-action="remove">移除背景圖片／材質</button>${importedMode?'<button class="button" data-bg-action="restore">還原原背景</button>':''}</div>
+    <p class="hint" id="bg-result" role="status">背景大小：${escapeHtml(settings.size)}；位置：${escapeHtml(settings.position)}。${importedMode?'原遠端貼圖仍需網路；上傳新圖會內嵌。':''}不是修圖工具，無法修改圖片內的文字或像素。</p></section>`;
+}
+function writeBackgroundStyles(styles,restore=false) {
+  if(importedMode) {
+    const record=recordFor(importedSelected);
+    if(restore)BACKGROUND_KEYS.forEach(key=>delete record.styles[key]);
+    else Object.assign(record.styles,styles);
+    const state=ensureImportedState(importedSelected);state.context='';
+    refreshAppearanceStyles();syncStateContext(importedSelected);updateImportedOverlay();renderImportedGuides();
+  } else {
+    const item=selectedDemo(),map={'background-image':'backgroundImage','background-size':'backgroundSize','background-position':'backgroundPosition','background-repeat':'backgroundRepeat'};
+    for(const [key,value]of Object.entries(styles))item[map[key]]=value;
+    if('background-image'in styles)item.gradient=false;
+    renderDemo();
+  }
+  scheduleAppearanceSave();
+}
+function activeSingleBackground() {return importedMode?importedSelectedElements.length===1 && importedSelected?.isConnected:selectedIds.length===1 && !!selectedDemo();}
+async function uploadSelectedBackground(field) {
+  const file=field.files?.[0];if(!file || !activeSingleBackground())return;
+  if (updateRequested || maintenanceStoragePaused) { setStatus('更新／維護正在套用，貼圖未更改；請完成後重新選擇圖片。'); return; }
+  const request=++backgroundRequestSequence,mode=importedMode,target=mode?importedSelected:selectedDemo(),generation=sourceGeneration,viewport=viewportMode,state=appearanceState;
+  pendingBackgroundRequest = request;
+  const scope=mode?recordFor(target,false)?.scope||'this-element':null;
+  function stillCurrent(){return request===backgroundRequestSequence && field.isConnected && mode===importedMode && generation===sourceGeneration && viewport===viewportMode && state===appearanceState && activeSingleBackground() && target===(mode?importedSelected:selectedDemo()) && (!mode || scope===(recordFor(target,false)?.scope||'this-element'));}
+  document.getElementById('bg-result').textContent='正在讀取本機圖片…';
+  try {
+    const data=await readBackgroundFile(file);if(!stillCurrent())return;
+    savePoint();writeBackgroundStyles({'background-image':`url("${data}")`,'background-size':'cover','background-position':'50% 50%','background-repeat':'no-repeat'});
+    isTyping=false;demoFieldDirty=false;mode?renderImportedInspector():renderDemoInspector();
+    setStatus('背景貼圖已內嵌，可調大小／位置／重複；HTML與JSON可回讀。原文字、前景圖片與業務未更改。');
+  } catch(error){if(stillCurrent()){document.getElementById('bg-result').textContent=error.message;setStatus('貼圖未更改：'+error.message);}}
+  finally { if (pendingBackgroundRequest === request) pendingBackgroundRequest = null; }
+}
+function updateBackgroundField(event,commit) {
+  const field=event.target;if(!field.id?.startsWith('bg-'))return false;
+  if(!activeSingleBackground())return true;
+  if(field.id==='bg-image-file'){if(event.type==='change')void uploadSelectedBackground(field);return true;}
+  const settings=backgroundSettings();let styles;
+  if(field.id==='bg-size') {
+    document.getElementById('bg-scale').disabled=field.value!=='custom';
+    if(field.value==='keep')return true;
+    styles={'background-size':field.value==='custom'?`${clamp(Number(document.getElementById('bg-scale').value),10,400)}% auto`:field.value};
+  } else if(field.id==='bg-scale') {
+    if(document.getElementById('bg-size').value!=='custom' || !field.value)return true;
+    styles={'background-size':`${clamp(Number(field.value),10,400)}% auto`};
+  } else if(field.id==='bg-x' || field.id==='bg-y') {
+    if(!settings.image.includes('url('))return true;
+    styles={'background-position':`${clamp(Number(document.getElementById('bg-x').value),0,100)}% ${clamp(Number(document.getElementById('bg-y').value),0,100)}%`};
+  } else if(field.id==='bg-repeat'){if(field.value==='keep')return true;styles={'background-repeat':field.value};}
+  else if(field.id==='bg-texture') {
+    const preset=TEXTURE_PRESETS[field.value]; if(!preset)return true;
+    styles={'background-image':preset.image,'background-size':preset.size,'background-position':'0% 0%','background-repeat':'repeat'};
+  }
+  else return true;
+  if(!Object.entries(styles).every(([key,value])=>safeAppearanceStyle(key,value)))return true;
+  const dirty=importedMode?ensureImportedState(importedSelected).fieldDirty:demoFieldDirty;
+  if(!dirty)savePoint();
+  if(importedMode)ensureImportedState(importedSelected).fieldDirty=!commit;else demoFieldDirty=!commit;
+  isTyping=!commit;writeBackgroundStyles(styles);
+  if(commit){isTyping=false;importedMode?renderImportedInspector():renderDemoInspector();}
+  return true;
+}
+function backgroundAction(action) {
+  if(!activeSingleBackground())return;
+  cancelBackgroundUpload();savePoint();writeBackgroundStyles({'background-image':'none'},action==='restore'&&importedMode);
+  isTyping=false;demoFieldDirty=false;importedMode?renderImportedInspector():renderDemoInspector();
+  setStatus(action==='restore'?'已還原此視口／狀態的原背景覆寫；原來源及文字保留。':'已移除背景圖片；可復原。原文字／前景圖片未更改。');
+}
+</script>
+  <script>
+'use strict';
+
+// Standalone shapes are a canvas document, not selector-based source patches.
+const CANVAS_FORMAT = 'visionflow-canvas-v1';
+const CANVAS_NUMBERS = {
+  x: [-10000, 10000], y: [-10000, 10000], w: [1, 10000], h: [1, 10000],
+  borderWidth: [0, 1000], borderRadius: [0, 10000], fontSize: [1, 10000],
+  gAngle: [0, 360], sX: [-1000, 1000], sY: [-1000, 1000], sBlur: [0, 1000], sOpacity: [0, 100], textShadowOpacity: [0, 100]
+};
+const CANVAS_CSS = {
+  color: 'color', borderColor: 'color', textColor: 'color',
+  gStart: 'color', gEnd: 'color', sColor: 'color', shadowColor: 'color',
+  fontFamily: 'font-family', customBorderRadius: 'border-radius', clipPath: 'clip-path'
+};
+
+function validateCanvasBackground(item) {
+  const clean={},fields={backgroundImage:'background-image',backgroundSize:'background-size',backgroundPosition:'background-position',backgroundRepeat:'background-repeat'};
+  for(const [key,css] of Object.entries(fields)) {
+    if(item?.[key]===undefined)continue;
+    if(!safeAppearanceStyle(css,item[key]))throw new Error('畫布背景貼圖格式無效：'+key);
+    clean[key]=item[key];
+  }
+  return clean;
+}
+
+function validateCanvasData(data) {
+  if (!data || data.format !== CANVAS_FORMAT || !Array.isArray(data.items) || data.items.length > 1000)
+    throw new Error('不是支援的 VisionFlow 畫布專案（最多 1000 個圖層）。');
+  const preset = VIEWPORT_PRESETS[data.viewport?.mode];
+  const size = preset ? [preset.width, preset.height] : [];
+  if (!preset || data.viewport.width !== size[0] || data.viewport.height !== size[1])
+    throw new Error('畫布視口資料不完整。');
+  const theme = themes.find(t => t.id === data.theme);
+  if (!theme || data.background !== theme.bg) throw new Error('畫布主題資料不完整。');
+  for (const key of ['projectName', 'userNotes'])
+    if (data[key] != null && (typeof data[key] !== 'string' || data[key].length > 10000))
+      throw new Error('畫布說明格式不正確。');
+  const ids = new Set();
+  const cleanItems = data.items.map(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item) ||
+        typeof item.id !== 'string' || !item.id || item.id.length > 200 || ids.has(item.id) ||
+        !['shape', 'text'].includes(item.type)) throw new Error('畫布圖層 ID／類型無效或重複。');
+    ids.add(item.id);
+    const clean = {id: item.id, type: item.type};
+    for (const key of ['x', 'y', 'w', 'h'])
+      if (!(key in item)) throw new Error('畫布圖層缺少位置或尺寸。');
+    for (const [key, [min, max]] of Object.entries(CANVAS_NUMBERS)) {
+      if (item[key] == null) continue;
+      if (typeof item[key] !== 'number' || !Number.isFinite(item[key]) || item[key] < min || item[key] > max)
+        throw new Error('畫布數值無效：' + key);
+      clean[key] = item[key];
+    }
+    for (const [key, property] of Object.entries(CANVAS_CSS)) {
+      if (item[key] == null) { if (item[key] === null) clean[key] = null; continue; }
+      if (typeof item[key] !== 'string' || item[key].length > 1000 || /[;{}<>\u0000]|url\s*\(|expression\s*\(/i.test(item[key]) ||
+          !CSS.supports(property, item[key]) || (key === 'clipPath' && !/^polygon\(/.test(item[key])))
+        throw new Error('畫布樣式無效：' + key);
+      clean[key] = item[key];
+    }
+    Object.assign(clean,validateCanvasBackground(item));
+    for (const key of ['name', 'content']) {
+      if (item[key] == null) continue;
+      if (typeof item[key] !== 'string' || item[key].length > 10000) throw new Error('畫布文字無效。');
+      clean[key] = item[key];
+    }
+    for (const key of ['gradient', 'shadow', 'textShadow']) {
+      if (item[key] == null) continue;
+      if (typeof item[key] !== 'boolean') throw new Error('畫布開關資料無效。');
+      clean[key] = item[key];
+    }
+    if (item.borderStyle != null) {
+      if (!['solid', 'dashed', 'dotted'].includes(item.borderStyle)) throw new Error('畫布邊框樣式無效。');
+      clean.borderStyle = item.borderStyle;
+    }
+    if (item.groupId != null) {
+      if (!(typeof item.groupId === 'string' && item.groupId.length <= 200) &&
+          !(typeof item.groupId === 'number' && Number.isSafeInteger(item.groupId))) throw new Error('画布群組 ID 無效。');
+      clean.groupId = item.groupId;
+    }
+    return clean;
+  });
+  return {...data, items: cleanItems};
+}
+
+// A single renderer keeps the editor and exported HTML visually consistent.
+// DOM properties/textContent avoid interpreting imported strings as HTML/CSS markup.
+function createCanvasElement(item, doc = document) {
+  const element = doc.createElement('div');
+  element.className = 'canvas-item';
+  element.dataset.id = item.id;
+  Object.assign(element.style, {
+    position: 'absolute', boxSizing: 'border-box',
+    left: `${item.x}px`, top: `${item.y}px`, width: `${item.w}px`, height: `${item.h}px`,
+    border: `${item.borderWidth || 0}px ${item.borderStyle || 'solid'} ${item.borderColor || '#000000'}`,
+    backgroundColor: item.color || 'transparent',
+    borderRadius: item.customBorderRadius || `${item.borderRadius || 0}px`
+  });
+  if (item.clipPath) element.style.clipPath = item.clipPath;
+  if (item.gradient) element.style.backgroundImage = `linear-gradient(${item.gAngle ?? 90}deg, ${item.gStart || '#fff'}, ${item.gEnd || '#000'})`;
+  if(item.backgroundImage && !item.gradient) {
+    element.style.backgroundImage=item.backgroundImage;
+    element.style.backgroundSize=item.backgroundSize||'cover';
+    element.style.backgroundPosition=item.backgroundPosition||'50% 50%';
+    element.style.backgroundRepeat=item.backgroundRepeat||'no-repeat';
+  }
+  if (item.shadow) { const shadowColor=item.sColor || 'rgba(0,0,0,0.2)', opacity=item.sOpacity == null ? colorAlphaPercent(shadowColor) : item.sOpacity; element.style.boxShadow = `${item.sX || 0}px ${item.sY || 0}px ${item.sBlur || 0}px ${colorWithOpacity(shadowColor,opacity)}`; }
+  const text = doc.createElement('div');
+  Object.assign(text.style, {
+    width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: item.fontFamily || 'Inter', fontSize: `${item.fontSize || 16}px`,
+    color: item.textColor || '#17202a'
+  });
+  if (item.type === 'text') text.style.textAlign = 'center';
+  if (item.textShadow) { const shadowColor=item.shadowColor || '#000000', opacity=item.textShadowOpacity == null ? colorAlphaPercent(shadowColor) : item.textShadowOpacity; text.style.textShadow = `2px 2px 4px ${colorWithOpacity(shadowColor,opacity)}`; }
+  if (item.type === 'text') (item.content || '').split('\n').forEach((line, index) => {
+    if (index) text.appendChild(doc.createElement('br'));
+    text.appendChild(doc.createTextNode(line));
+  });
+  else text.textContent = item.content || '';
+  element.appendChild(text);
+  return element;
+}
+
+function collectCanvasData() {
+  const mode = viewportMode, theme = themes.find(t => t.id === activeTheme) || themes[0];
+  return validateCanvasData({
+    format: CANVAS_FORMAT, tool: 'VisionFlow',
+    viewport: {mode, ...viewportSize(mode)},
+    theme: theme.id, background: theme.bg, items: structuredClone(items),
+    projectName: appearanceSource.projectName || '', userNotes: appearanceNotes,
+    preview: {kind: 'static-canvas-design', originalProgramIncluded: false, businessBehaviorGuaranteed: false}
+  });
+}
+
+function buildCanvasHtml() {
+  const data = collectCanvasData();
+  const doc = new DOMParser().parseFromString('<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>', 'text/html');
+  doc.title = data.projectName || 'VisionFlow 畫布設計';
+  const style = doc.createElement('style');
+  style.textContent = '*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}';
+  doc.head.appendChild(style);
+  const board = doc.createElement('main'); board.id = 'visionflow-canvas';
+  Object.assign(board.style, {position: 'relative', width: `${data.viewport.width}px`, height: `${data.viewport.height}px`, backgroundColor: data.background});
+  data.items.forEach(item => board.appendChild(createCanvasElement(item, doc)));
+  doc.body.appendChild(board);
+  const meta = doc.createElement('script'); meta.type = 'application/json'; meta.id = 'visionflow-canvas-data';
+  meta.textContent = JSON.stringify(data, null, 2).replace(/</g, '\\u003c'); doc.body.appendChild(meta);
+  return '<!doctype html>\n' + doc.documentElement.outerHTML;
+}
+
+function importCanvasData(value) {
+  const data = validateCanvasData(value); // Validate completely before changing the current design.
+  cancelBackgroundUpload();savePoint();
+  cancelTransientTools(); fitImportedOnLoad=false; zoomRevision++;
+  measureState='idle'; measureStart={x:0,y:0}; measureEnd={x:0,y:0};
+  sourceGeneration++; importedMode = false; importedFrame = null;
+  importedSelected = null; importedSelectedElements = []; importedLayers = [];
+  importedSourceHtml = ''; importedHtml = ''; importedPreparedHtml = '';
+  importReport={warnings:[],externalResources:[]};
+  appearanceRecords = {}; appearanceSource = {htmlFile: 'index.html', projectName: data.projectName || '', page: '/', sourceHash: null};
+  appearanceNotes = data.userNotes || ''; appearanceState = 'default';
+  pageSessions = {}; folderFiles = []; folderPagePaths = []; folderSetKey = ''; exportedAppearanceFingerprint = null;
+  items = structuredClone(data.items); viewportMode = data.viewport.mode; activeTheme = data.theme;
+  selectedId = null; selectedIds = []; manualGuides = []; hiddenDemoGuideKeys = []; demoGuideTargets = [];
+  importedManualGuides = []; importedGuideTargets = []; pendingSelection = []; pendingGroups = []; pendingGuideTargets = [];
+  importedDirty = false; editing = true; zoom = 1; isTyping = false; demoFieldDirty = false;
+  syncAppearanceControls(); applyTheme(themes.find(t => t.id === activeTheme)); updateToolButtons(); renderDemo(); renderDemoInspector();
+  scheduleAppearanceSave(); setStatus('已載入畫布專案；圖層可繼續編輯。');
+}
+</script>
+  <script>
+'use strict';
+
+function appearanceOrigin(source = appearanceSource) {
+  return source.origin || {entryPath: source.htmlFile, sourceHash: source.sourceHash || null, schemaVersion: 1};
+}
+
+function validateAppearanceOrigin(origin) {
+  if (!origin || typeof origin.entryPath !== 'string' || !origin.entryPath || origin.entryPath.length > 4096 ||
+      origin.schemaVersion !== 1 || (origin.sourceHash != null && !/^[a-f0-9]{64}$/i.test(origin.sourceHash)))
+    throw new Error('外觀來源識別格式不完整。');
+  return origin;
+}
+
+function requireMatchingAppearanceSource(data) {
+  const incoming = validateAppearanceOrigin(data.origin || appearanceOrigin(data.source));
+  const current = appearanceOrigin();
+  // integrationPagePath/source.page is user-editable metadata, not file identity.
+  if (incoming.entryPath !== current.entryPath || (incoming.sourceHash && incoming.sourceHash !== current.sourceHash))
+    throw new Error('JSON 的來源檔案／頁面／校驗值與目前頁面不符；請先匯入正確的原始 HTML。');
+}
+
+function appearanceFingerprint() {
+  // Excludes timestamps, selection, zoom and other editing-only state.
+  return JSON.stringify(collectAppearanceData());
+}
+
+function hasUnexportedAppearanceChanges() {
+  const current = appearanceFingerprint();
+  const baseline = exportedAppearanceFingerprint ?? initialAppearanceFingerprint;
+  if (baseline !== null) return current !== baseline;
+  return Object.values(appearanceRecords).some(r => Object.keys(r.styles).length) || !!appearanceNotes ||
+    !!appearanceSource.projectName || appearanceSource.page !== '/' + appearanceOrigin().entryPath;
+}
+
+function pageSessionKey(origin = appearanceOrigin()) {
+  return JSON.stringify([folderSetKey, origin.entryPath, origin.sourceHash]);
+}
+
+function refreshEntryPagesControl() {
+  const select = document.getElementById('vf-entry-page');
+  select.replaceChildren();
+  if (!importedMode || !folderFiles.length) {
+    const option = document.createElement('option');
+    option.textContent = importedMode ? '草稿目前頁（切頁須重選原資料夾）' : '尚未匯入';
+    option.value = importedMode ? appearanceOrigin().entryPath : '';
+    select.appendChild(option); select.disabled = true; return;
+  }
+  folderPagePaths.forEach(path => {
+    const option = document.createElement('option'); option.value = path; option.textContent = path;
+    select.appendChild(option);
+  });
+  select.value = appearanceOrigin().entryPath;
+  // Reimported appearance archives retain their original source identity.
+  if (select.selectedIndex < 0) {
+    const option = document.createElement('option'); option.value = appearanceOrigin().entryPath;
+    option.textContent = appearanceOrigin().entryPath + '（外觀參考來源）'; select.appendChild(option); select.value = option.value;
+  }
+  select.disabled = folderPagePaths.length < 2;
+}
+
+function downloadTextFile(content, filename, kind) {
+  const blob = new Blob([content], {type: kind === 'json' ? 'application/json;charset=utf-8' : 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+  anchor.href = url; anchor.download = filename; document.body.appendChild(anchor);
+  try { anchor.click(); } finally { anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+}
+
+function updateLegacyDraftBackupButton() {
+  const button=document.getElementById('vf-backup-v1');
+  try { button.disabled=localStorage.getItem(DRAFT_KEY+'-backup-before-v2') === null; }
+  catch { button.disabled=true; }
+}
+function downloadDraftBackup(legacy = false) {
+  try {
+    // Copy the exact stored bytes; even a damaged/unknown draft can be recovered offline.
+    const old = legacy === true;
+    const raw = localStorage.getItem(old ? DRAFT_KEY+'-backup-before-v2' : DRAFT_KEY);
+    if (old && raw === null) throw new Error('尚無升級前草稿備份。');
+    downloadTextFile(raw === null ? snapshot() : raw, old ? 'visionflow-draft-before-v2.json' : 'visionflow-draft-backup.json', 'json');
+    setStatus('已下載草稿原始備份，未清除或覆寫本機草稿。此備份供復原排錯；日常交接請用畫布／外觀 JSON。');
+  } catch (error) { sysAlert('草稿備份失敗：' + error.message); }
+}
+
+function validateImportReport(report) {
+  if (!report || !Array.isArray(report.warnings) || !Array.isArray(report.externalResources) || report.warnings.length>2000 || report.externalResources.length>2000)
+    throw new Error('資源報告格式無效。');
+  if (report.warnings.some(w=>typeof w!=='string' || w.length>10000) || report.externalResources.some(r=>!r || typeof r.url!=='string' || !/^https?:\/\//i.test(r.url) || r.url.length>10000 || typeof r.kind!=='string' || r.kind.length>100 || typeof r.reference!=='string' || r.reference.length>5000))
+    throw new Error('資源報告內容無效。');
+  return report;
+}
+function importReportText() {
+  return ['VisionFlow 本頁資源報告',`來源：${importedMode ? appearanceOrigin().entryPath : '空白畫布'}`,
+    '清單僅檢查已匯入的靜態檔案；匯入處理器未主動抓取遠端，但瀏覽器預覽可能請求這些網址。不包含 JS 動態請求或外部 CSS 的子依賴。',
+    ...importReport.warnings.map(w=>'警告：'+w),
+    ...importReport.externalResources.map(r=>`需要網路：${r.kind} | ${r.reference} | ${r.url}`),
+    !importReport.externalResources.length ? '未發現已掃描範圍的 HTTP 資源；不等於保證全離線。' : `共 ${importReport.externalResources.length} 項外部依賴。`].filter(Boolean).join('\n');
+}
+function renderImportReport() {
+  const section=document.getElementById('vf-resource-report'); if (!section) return;
+  section.hidden=!importedMode;
+  document.getElementById('vf-resource-summary').textContent=`${importReport.externalResources.length} 項網路依賴，${importReport.warnings.length} 項匯入提醒`;
+  document.getElementById('vf-resource-text').value=importReportText();
+}
+function createExportArtifact(kind) {
+  if (!['html','json'].includes(kind)) throw new Error('不支援的匯出格式。');
+  if (cancelEditorGesture || snapDragActive || guideDrag || isPanning || isErasing || isMarquee) throw new Error('請先完成或取消目前手勢，再匯出／分享。');
+  if (importedMode && !isIframeLoaded) throw new Error('請等待匯入畫布完成載入，再匯出／分享。');
+  const data=importedMode ? collectAppearanceData() : collectCanvasData();
+  return {kind,filename:`visionflow-${importedMode?'appearance':'canvas'}.${kind}`,
+    content:kind==='json'?JSON.stringify(data,null,2):importedMode?buildAppearanceHtml():buildCanvasHtml(),
+    sourceKey:importedMode?pageSessionKey():null,fingerprint:importedMode?JSON.stringify(data):null};
+}
+function markArtifactExported(artifact) {
+  if (importedMode && artifact.sourceKey===pageSessionKey() && artifact.fingerprint) exportedAppearanceFingerprint=artifact.fingerprint;
+  scheduleAppearanceSave();
+}
+</script>
+  <script>
+'use strict';
+
+// This file shares the existing editor's global lexical scope. DOM caches are
+// disposable; appearanceRecords is the serializable source of all user edits.
+let appearanceRecords = {};
+let appearanceSource = { htmlFile: 'index.html', projectName: '', page: '/', sourceHash: null };
+let appearanceNotes = '';
+let appearanceState = 'default';
+let trustedScripts = false;
+let folderFiles = [];
+let importedPreparedHtml = '';
+let importReport = {warnings:[],externalResources:[]};
+let pendingSelection = [];
+let pendingGroups = [];
+let pendingGuideTargets = [];
+let appearanceAutosaveTimer;
+let sourceGeneration = 0;
+const previewInlineCache = new Map();
+let pageSessions = {};
+let folderPagePaths = [];
+let folderSetKey = '';
+const sourceFileSets = new Map(); // Live File references only; never serialized into localStorage.
+let exportedAppearanceFingerprint = null;
+let initialAppearanceFingerprint = null;
+let draftRecoveryBlocked = false;
+let importRequestSequence = 0;
+let pendingImportRequest = null;
+const DRAFT_KEY = 'visionflow-appearance-draft-v1';
+const PRESERVE = ['text', 'links', 'image-source', 'click-handler', 'form-behavior', 'data-logic', 'program-state'];
+const VALID_STATES = ['default', 'hover', 'focus', 'disabled', 'loading'];
+const STYLE_ALLOWLIST = new Set(['background-color', 'background-image', 'background-size', 'background-position', 'background-repeat', 'border-radius', 'border-width', 'border-style', 'border-color', 'box-shadow', 'font-size', 'font-family', 'color', 'text-shadow', 'width', 'height', 'box-sizing', 'translate']);
+
+// Some mobile browsers and embedded WebViews expose FileReader but not File.text().
+// Keep the import path working on both implementations.
+function readFileText(file) {
+  if (file && typeof file.text === 'function') return file.text();
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') { reject(new Error('此瀏覽器不支援讀取本機檔案。')); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('本機檔案讀取失敗。'));
+    reader.readAsText(file);
+  });
+}
+
+function splitCssList(value) {
+  const parts=[]; let depth=0, start=0;
+  for(let i=0;i<value.length;i++) {
+    if(value[i]==='(') depth++; if(value[i]===')') depth--;
+    if(value[i]===',' && depth===0) { parts.push(value.slice(start,i).trim()); start=i+1; }
+  }
+  parts.push(value.slice(start).trim()); return parts;
+}
+function readShadow(value, text = false) {
+  if(value==='none') return {parts:[],color:'#000000',opacity:text?0.65:0.24,lengths:text?['2px','2px','4px']:['0px','10px','20px','0px'],inset:false};
+  const parts=splitCssList(value), first=parts[0];
+  const tokens=first.match(/(?:rgba?|hsla?|color|oklch|oklab|lab|lch)\([^)]*\)|#[\da-f]+|[^\s]+/gi)||[];
+  const lengths=tokens.filter(t=>/^-?(?:\d*\.)?\d+(?:px|em|rem)?$/.test(t));
+  const color=tokens.find(t=>t!=='inset' && !lengths.includes(t))||'#000000';
+  return {parts,color,opacity:colorAlphaPercent(color)/100,lengths,inset:tokens.includes('inset')};
+}
+function readGradient(value) {
+  // Keep arbitrary backgrounds intact. Parameter editing is available for a
+  // single linear gradient only; complex backgrounds require explicit replacement.
+  if(!/^linear-gradient\(/.test(value) || !value.endsWith(')')) return null;
+  const parts=splitCssList(value.slice(16,-1));
+  if(parts.length<2) return null;
+  let angle='180deg'; if(/^(?:-?[\d.]+deg|to\s)/.test(parts[0])) angle=parts.shift();
+  if(parts.length<2 || parts.some(p=>p.includes('gradient('))) return null;
+  return {angle,stops:parts};
+}
+function stopColor(stop) { return stop.match(/^(?:rgba?|hsla?|color|oklch|oklab|lab|lch)\([^)]*\)|^#[\da-f]+|^[a-z]+/i)?.[0]||'#ffffff'; }
+function refreshComplexFields(s,c) {
+  s.shadowParts=readShadow(c.boxShadow); const sh=s.shadowParts;
+  s.sX=parseFloat(sh.lengths[0])||0; s.sY=parseFloat(sh.lengths[1])||0; s.sBlur=parseFloat(sh.lengths[2])||0; s.sColor=shadowHex(sh.color); s.sOpacity=Math.round(sh.opacity*100);
+  s.textShadowParts=readShadow(c.textShadow,true); s.shadowColor=shadowHex(s.textShadowParts.color); s.textShadowOpacity=Math.round(s.textShadowParts.opacity*100);
+  s.gradientParts=readGradient(c.backgroundImage);
+  if(s.gradientParts) {s.gAngle=parseFloat(s.gradientParts.angle)||0;s.gStart=rgbToHex(stopColor(s.gradientParts.stops[0]));s.gEnd=rgbToHex(stopColor(s.gradientParts.stops.at(-1)));}
+}
+function shadowCss(sh) {
+  const alpha=Number.isFinite(sh.opacity)?sh.opacity:colorAlphaPercent(sh.color)/100;
+  const first=[sh.inset?'inset':'',colorWithOpacity(sh.color,alpha*100),...sh.lengths].filter(Boolean).join(' ');
+  return [first,...sh.parts.slice(1)].join(', ');
+}
+function elementPath(el) {
+  const parts = [];
+  while (el && el.nodeType === 1 && el.tagName !== 'HTML') {
+    const siblings = el.parentElement ? [...el.parentElement.children].filter(n => n.tagName === el.tagName) : [el];
+    parts.unshift(`${el.tagName.toLowerCase()}:nth-of-type(${siblings.indexOf(el) + 1})`);
+    el = el.parentElement;
+  }
+  return 'html > ' + parts.join(' > ');
+}
+function identifyElement(el) {
+  const doc = el.ownerDocument;
+  let selector = elementPath(el), confidence = 'structural';
+  if (el.id && doc.querySelectorAll('#' + CSS.escape(el.id)).length === 1) {
+    selector = '#' + CSS.escape(el.id); confidence = 'stable-id';
+  } else {
+    for (const attr of [...el.attributes].filter(a => /^data-(?:testid|test|cy|key|id|component|component-id)$/.test(a.name) || (a.name.startsWith('data-') && /-(?:id|key)$/.test(a.name) && !a.name.startsWith('data-vf-')))) {
+      const candidate = `[${CSS.escape(attr.name)}="${CSS.escape(attr.value)}"]`;
+      if (doc.querySelectorAll(candidate).length === 1) { selector = candidate; confidence = 'data-attribute'; break; }
+    }
+  }
+  const r = el.getBoundingClientRect();
+  return {
+    id: el.id || null, tag: el.tagName.toLowerCase(), role: el.getAttribute('role') || (el.tagName==='INPUT' ? ({checkbox:'checkbox',radio:'radio',range:'slider',number:'spinbutton',button:'button',submit:'button'}[el.type]||'textbox') : ({BUTTON:'button', A:'link', TEXTAREA:'textbox', SELECT:'combobox'}[el.tagName] || null)),
+    text: (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+    selector, path: elementPath(el), confidence, scope: '',
+    dataAttributes: Object.fromEntries([...el.attributes].filter(a => a.name.startsWith('data-') && !a.name.startsWith('data-vf-')).map(a => [a.name, a.value])),
+    referenceRect: { x:r.x, y:r.y, width:r.width, height:r.height }
+  };
+}
+function findTarget(target, doc = importedFrame?.contentDocument) {
+  if (!doc || !target) return null;
+  try { return doc.querySelector(target.selector) || doc.querySelector(target.path); } catch { return null; }
+}
+function ensureImportedState(el) {
+  if (importedState.has(el)) return importedState.get(el);
+  const r = el.getBoundingClientRect(), c = el.ownerDocument.defaultView.getComputedStyle(el);
+  const appearanceSheet = el.ownerDocument.getElementById('vf-appearance-styles');
+  if (appearanceSheet) appearanceSheet.disabled = true;
+  const translated = previewInlineCache.get(el)?.get('translate');
+  const currentTranslate=el.style.getPropertyValue('translate'), currentPriority=el.style.getPropertyPriority('translate');
+  if(translated) el.style.setProperty('translate',translated.value,translated.priority);
+  const originalTranslate = el.ownerDocument.defaultView.getComputedStyle(el).translate;
+  if(translated) el.style.setProperty('translate',currentTranslate,currentPriority);
+  if (appearanceSheet) appearanceSheet.disabled = false;
+  const state = {
+    dx:0, dy:0, width:Math.max(1, Math.round(r.width)), height:Math.max(1, Math.round(r.height)), widthModified:false,
+    colorOverride:null, originalColor:rgbToHex(c.backgroundColor), gradient:c.backgroundImage.includes('gradient'),
+    gStart:'#ffffff', gEnd:'#000000', gAngle:90, boxShadow:c.boxShadow !== 'none', sX:0, sY:10, sBlur:20, sColor:'#000000',
+    borderRadius:parseFloat(c.borderRadius)||0, borderWidth:parseFloat(c.borderWidth)||0, borderColor:rgbToHex(c.borderColor), borderStyle:c.borderStyle.split(' ')[0] || 'solid',
+    fontSize:parseFloat(c.fontSize)||16, fontFamily:c.fontFamily.split(',')[0].replace(/['"]/g,''), textColor:rgbToHex(c.color),
+    textShadow:c.textShadow !== 'none', shadowColor:'#000000', textOverride:null,
+    target:identifyElement(el), originalTranslate, originalStyles:el.getAttribute('style'), context:'',
+    positionChanged:false, sizeChanged:false
+  };
+  refreshComplexFields(state,c);
+  importedState.set(el, state);
+  importedElementIds.set(el, state.target.selector);
+  return state;
+}
+function recordFor(el, create = true) {
+  const s = ensureImportedState(el);
+  const key = JSON.stringify([appearanceSource.page, s.target.selector, viewportMode, appearanceState]);
+  if (!appearanceRecords[key] && create) appearanceRecords[key] = {
+    target:structuredClone(s.target), page:appearanceSource.page, viewport:viewportMode, state:appearanceState,
+    scope:'this-element', styles:{}, preserve:[...PRESERVE], notes:''
+  };
+  return appearanceRecords[key];
+}
+function syncStateContext(el) {
+  const s = ensureImportedState(el), context = viewportMode + ':' + appearanceState;
+  if (s.context === context) return s;
+  s.context = context; s.positionChanged = false; s.sizeChanged = false;
+  const rec = recordFor(el, false), move = rec?.layoutIntent?.referenceOffset;
+  s.dx = move?.x || 0; s.dy = move?.y || 0;
+  const c = el.ownerDocument.defaultView.getComputedStyle(el);
+  s.originalColor = rgbToHex(c.backgroundColor); s.colorOverride = rec?.styles['background-color'] || null;
+  s.borderRadius = parseFloat(c.borderRadius) || 0; s.borderWidth = parseFloat(c.borderWidth) || 0;
+  s.borderColor = rgbToHex(c.borderColor); s.borderStyle = c.borderStyle.split(' ')[0];
+  s.fontSize = parseFloat(c.fontSize) || 16; s.fontFamily = c.fontFamily.split(',')[0].replace(/['"]/g,'');
+  s.textColor = rgbToHex(c.color); s.gradient = c.backgroundImage.includes('gradient');
+  s.boxShadow = c.boxShadow !== 'none'; s.textShadow = c.textShadow !== 'none';
+  refreshComplexFields(s,c);
+  const r = el.getBoundingClientRect();
+  s.width = parseFloat(c.width) || Math.round(r.width); s.height = parseFloat(c.height) || Math.round(r.height);
+  return s;
+}
+function selectImported(element, additive = false) {
+  if (eraserMode || !isCandidate(element)) return;
+  importedSelectedElements = additive ? [...new Set([...importedSelectedElements, element])] : [element];
+  importedSelectedElements = importedSelectionWithGroups(importedSelectedElements);
+  importedSelected = importedSelectedElements[0] || null;
+  importedSelectedElements.forEach(syncStateContext);
+  if (guideArmed && importedSelectedElements.length === 1) {
+    importedGuideTargets = [...new Set([...importedGuideTargets, element])];
+    guideArmed = false; guideMode = 'live'; guidesVisible = true; updateToolButtons(); renderImportedGuides();
+  }
+  updateImportedOverlay(); renderLayers(); updateGroupButtonState();
+  if (!isTyping) renderImportedInspector();
+}
+function layoutReference(el, s) {
+  const r = el.getBoundingClientRect(), p = el.parentElement, pr = p?.getBoundingClientRect();
+  const sibling = el.previousElementSibling, sr = sibling?.getBoundingClientRect();
+  return {
+    align:s.alignIntent || 'user-position-reference', relativeTo:p ? identifyElement(p) : null,
+    parentLayout:p ? el.ownerDocument.defaultView.getComputedStyle(p).display : null,
+    referenceOffset:{x:s.dx, y:s.dy}, referenceRect:{x:r.x,y:r.y,width:r.width,height:r.height},
+    relativeRect:pr ? {x:r.x-pr.x,y:r.y-pr.y} : null,
+    previousSibling:sibling ? identifyElement(sibling) : null,
+    gap:sr ? {horizontal:r.left-sr.right,vertical:r.top-sr.bottom} : null,
+    preserveResponsiveLayout:true, integrationRequired:true
+  };
+}
+function positionValue(s) {
+  const original = s.originalTranslate && s.originalTranslate !== 'none' ? s.originalTranslate.split(/\s+/) : ['0px','0px'];
+  return `calc(${original[0]} + ${s.dx}px) calc(${original[1] || '0px'} + ${s.dy}px)${original[2] ? ' ' + original[2] : ''}`;
+}
+function applyImportedState() {
+  importedSelectedElements.forEach(el => {
+    const s = ensureImportedState(el);
+    if (s.positionChanged) {
+      if (recordFor(el, false)?.scope === 'all-matching') {
+        s.positionChanged = false;
+        setStatus('同類元素可能具有不同原始位移；移動僅支援「僅此元素」，請先切換範圍。');
+        return;
+      }
+      const rec = recordFor(el); rec.styles.translate = positionValue(s); rec.layoutIntent = layoutReference(el, s);
+    }
+    if (s.sizeChanged) {
+      const rec = recordFor(el);
+      rec.styles.width = `${s.width}px`; rec.styles.height = `${s.height}px`;
+    }
+  });
+  importedDirty = true; refreshAppearanceStyles(); updateImportedOverlay(); renderImportedGuides();
+  importedSelectedElements.forEach(el=>{const s=ensureImportedState(el);if(s.positionChanged) {const rec=recordFor(el,false);if(rec && rec.scope==='this-element') rec.layoutIntent=layoutReference(el,s);}});
+  scheduleAppearanceSave();
+}
+function stateSelector(selector, state) {
+  if (state === 'hover' || state === 'focus') return `${selector}:${state}`;
+  if (state === 'disabled') return `${selector}:is(:disabled,[aria-disabled="true"])`;
+  if (state === 'loading') return `${selector}:is([aria-busy="true"],[data-state="loading"])`;
+  return selector;
+}
+function safeSelector(selector) {
+  // CSS.escape identifiers can contain escaped punctuation; forbid only actual rule boundaries.
+  return typeof selector === 'string' && selector.length < 4096 && !/[{}<>\u0000]/.test(selector);
+}
+function boostSelector(selector) { return `:is(${selector}):is(:where(*),#vf-specificity-a#vf-specificity-b#vf-specificity-c)`; }
+function cssRules(records, simulate = false, staticFallback = false) {
+  let css = '';
+  const sorted = [...records].sort((a,b) => (a.state === 'default' ? 0 : 1) - (b.state === 'default' ? 0 : 1));
+  for (const rec of sorted) {
+    if (rec.page !== appearanceSource.page) continue;
+    if (simulate && (rec.viewport !== viewportMode || (rec.state !== 'default' && rec.state !== appearanceState))) continue;
+    // An exported file can be opened at a different viewport from the one
+    // used while editing. Keep the current default appearance as a static
+    // base; the responsive media rules below still override it when matched.
+    if (staticFallback && (rec.viewport !== viewportMode || rec.state !== 'default')) continue;
+    const selector = rec.scope === 'all-matching' ? rec.matchingSelector : rec.target.selector;
+    if (!safeSelector(selector)) continue;
+    const declarations = Object.entries(rec.styles)
+      .filter(([k,v]) => (!staticFallback || k === 'background-image' || k === 'background-size' || k === 'background-position' || k === 'background-repeat') && safeAppearanceStyle(k,v))
+      .map(([k,v]) => `${k}:${v} !important`).join(';');
+    if (!declarations) continue;
+    const rule = `${simulate ? selector : stateSelector(boostSelector(selector),rec.state)}{${declarations}}`;
+    const media = rec.viewport === 'mobile' ? 'max-width:700px' : rec.viewport === 'tablet' ? 'min-width:701px) and (max-width:1024px' : 'min-width:1025px';
+    css += simulate || staticFallback ? rule + '\n' : `@media (${media}){${rule}}\n`;
+  }
+  return css;
+}
+function refreshAppearanceStyles() {
+  const doc = importedFrame?.contentDocument; if (!doc?.head) return;
+  for(const [el,props] of previewInlineCache) {
+    for(const [key,original] of props) el.style.setProperty(key,original.value,original.priority);
+    if(!el.style.length && el.getAttribute('style')==='') el.removeAttribute('style');
+  }
+  previewInlineCache.clear();
+  let style = doc.getElementById('vf-appearance-styles');
+  if (!style) { style = doc.createElement('style'); style.id = 'vf-appearance-styles'; doc.head.appendChild(style); }
+  style.textContent = cssRules(Object.values(appearanceRecords), true);
+  const records=Object.values(appearanceRecords).filter(r=>r.page===appearanceSource.page && r.viewport===viewportMode && (r.state==='default'||r.state===appearanceState)).sort((a,b)=>(a.state==='default'?0:1)-(b.state==='default'?0:1));
+  for(const rec of records) {
+    const selector=rec.scope==='all-matching'?rec.matchingSelector:rec.target.selector;
+    if(!safeSelector(selector)) continue;
+    let targets=[];try{targets=[...doc.querySelectorAll(selector)];}catch{continue;}
+    for(const el of targets) {
+      if(el.closest('[data-vf-helper]')) continue;
+      if(!previewInlineCache.has(el)) previewInlineCache.set(el,new Map());
+      const props=previewInlineCache.get(el);
+      for(const [key,value] of Object.entries(rec.styles)) {
+        if(!safeAppearanceStyle(key,value)) continue;
+        if(!props.has(key)) props.set(key,{value:el.style.getPropertyValue(key),priority:el.style.getPropertyPriority(key)});
+        el.style.setProperty(key,value,'important');
+      }
+    }
+  }
+  invalidateSnapGeometry();
+}
+function updateImportedText(event, commit = false) { updateImported(event, commit); }
+function updateImported(event, commit = false) {
+  if (!importedSelected || !event?.target || event.target.id === 'itext') return;
+  const field = event.target, id = field.id, s = syncStateContext(importedSelected);
+  const metadata = ['vf-target-name','vf-change-scope','vf-matching-selector','vf-change-notes'];
+  const supported = ['ix','iy','iw','ih','iborderRadius','iborderWidth','iborderStyle','iborderColor','icolor','igradient','igStart','igEnd','igAngle','ishadow','isX','isY','isBlur','isColor','isOpacity','ifontFamily','ifontSize','itextColor','itextShadow','ishadowColor','itextShadowOpacity'];
+  if (!metadata.includes(id) && !supported.includes(id)) return;
+  if (!s.fieldDirty) savePoint();
+  s.fieldDirty = !commit; isTyping = !commit && event.type === 'input';
+  const rec = recordFor(importedSelected);
+  if (id === 'vf-target-name') rec.target.scope = field.value;
+  else if (id === 'vf-change-notes') rec.notes = field.value;
+  else if (id === 'vf-matching-selector') {
+    try { if (!safeSelector(field.value) || !importedFrame.contentDocument.querySelectorAll(field.value).length) throw new Error(); rec.matchingSelector = field.value; }
+    catch { setStatus('同類元素 selector 無效或沒有匹配，尚未套用。'); return; }
+  } else if (id === 'vf-change-scope') {
+    if (field.value === 'all-matching' && !rec.matchingSelector) { setStatus('請先填寫有效的同類元素 selector。'); field.value = rec.scope; return; }
+    if (field.value === 'all-matching' && rec.styles.translate) { setStatus('已有位移的修改只可套用此元素，避免覆盖同類項的原位移。'); field.value = rec.scope; return; }
+    rec.scope = field.value;
+  } else if (id === 'ix' || id === 'iy') {
+    if (rec.scope === 'all-matching') { setStatus('位置修改請先切換至「僅此元素」，保護同類項的原始位移。'); return; }
+    s[id === 'ix' ? 'dx' : 'dy'] = clamp(Number(field.value),-5000,5000); s.positionChanged = true;
+  } else if (id === 'iw' || id === 'ih') {
+    const prop = id === 'iw' ? 'width' : 'height'; s[prop] = clamp(Number(field.value),1,10000);
+    rec.styles[prop] = `${s[prop]}px`;
+  } else {
+    const direct = {
+      iborderRadius:['borderRadius','border-radius','px'], iborderWidth:['borderWidth','border-width','px'],
+      iborderStyle:['borderStyle','border-style',''], iborderColor:['borderColor','border-color',''],
+      icolor:['colorOverride','background-color',''], ifontFamily:['fontFamily','font-family',''],
+      ifontSize:['fontSize','font-size','px'], itextColor:['textColor','color','']
+    };
+    if (direct[id]) {
+      const [key, css, unit] = direct[id]; s[key] = unit ? clamp(Number(field.value),0,10000) : field.value;
+      rec.styles[css] = `${s[key]}${unit}`;
+    } else if (['igradient','igStart','igEnd','igAngle'].includes(id)) {
+      if (id === 'igradient') {
+        s.gradient = field.checked;
+        if(s.gradient) {delete rec.styles['background-size'];delete rec.styles['background-position'];delete rec.styles['background-repeat'];}
+      }
+      else s[{igStart:'gStart',igEnd:'gEnd',igAngle:'gAngle'}[id]] = field.value;
+      if(id !== 'igradient' && !s.gradientParts) { setStatus('複雜或多層背景不能局部解析。若確定要替換，請先關閉再啟用新漸層。'); return; }
+      const gradient=s.gradientParts||{angle:'90deg',stops:['#ffffff','#000000']};
+      if(id==='igAngle') gradient.angle=`${s.gAngle}deg`;
+      if(id==='igStart') gradient.stops[0]=gradient.stops[0].replace(stopColor(gradient.stops[0]),s.gStart);
+      if(id==='igEnd') gradient.stops[gradient.stops.length-1]=gradient.stops.at(-1).replace(stopColor(gradient.stops.at(-1)),s.gEnd);
+      s.gradientParts=gradient;
+      rec.styles['background-image'] = s.gradient ? `linear-gradient(${gradient.angle}, ${gradient.stops.join(', ')})` : 'none';
+    } else if (['ishadow','isX','isY','isBlur','isColor','isOpacity'].includes(id)) {
+      if (id === 'ishadow') s.boxShadow = field.checked;
+      else if (id === 'isColor') s.sColor=field.value;
+      else if (id === 'isOpacity') s.sOpacity=clamp(Number(field.value),0,100);
+      else s[{isX:'sX',isY:'sY',isBlur:'sBlur'}[id]] = clamp(Number(field.value),id === 'isBlur' ? 0 : -1000,1000);
+      const sh=s.shadowParts;
+      if(id==='isX') sh.lengths[0]=`${s.sX}px`;
+      if(id==='isY') sh.lengths[1]=`${s.sY}px`;
+      if(id==='isBlur') sh.lengths[2]=`${s.sBlur}px`;
+      if(id==='isColor' || id==='isOpacity') sh.color=s.sColor;
+      if(id==='isOpacity') sh.opacity=s.sOpacity/100;
+      rec.styles['box-shadow'] = s.boxShadow ? shadowCss(sh) : 'none';
+    } else {
+      if (id === 'itextShadow') s.textShadow = field.checked;
+      else if (id === 'ishadowColor') s.shadowColor=field.value;
+      else if (id === 'itextShadowOpacity') s.textShadowOpacity=clamp(Number(field.value),0,100);
+      s.textShadowParts.color=s.shadowColor;
+      if(id==='itextShadowOpacity') s.textShadowParts.opacity=s.textShadowOpacity/100;
+      rec.styles['text-shadow'] = s.textShadow ? shadowCss(s.textShadowParts) : 'none';
+    }
+  }
+  applyImportedState();
+  if (commit) { isTyping = false; renderImportedInspector(); }
+}
+function appearanceInspectorFields() {
+  const rec = recordFor(importedSelected,false), target = ensureImportedState(importedSelected).target;
+  return `<section class="section"><h2 class="panel-title">交接識別與範圍</h2><p class="hint">${target.confidence === 'structural' ? '沒有穩定 ID，請補充名稱／區域；DOM 路徑只是輔助。' : '識別：' + escapeHtml(target.selector)}</p><div class="form-grid"><div class="field full"><label>名稱／父級區域說明</label><input id="vf-target-name" value="${escapeHtml(rec?.target.scope || '')}"></div><div class="field full"><label>同類元素 CSS selector（先填寫再切換範圍）</label><input id="vf-matching-selector" value="${escapeHtml(rec?.matchingSelector || '')}" placeholder="例如 .list-item"></div><div class="field full"><label>套用範圍</label><select id="vf-change-scope"><option value="this-element">僅此元素</option><option value="all-matching" ${rec?.scope === 'all-matching' ? 'selected' : ''}>所有匹配元素</option></select></div><div class="field full"><label>此修改的整合說明</label><textarea id="vf-change-notes">${escapeHtml(rec?.notes || '')}</textarea></div></div><p class="hint">移動只代表布局意圖，整合時保留原有 Flex／Grid／響應式行為。文字內容預設鎖定，不會自動整合。</p></section>`;
+}
+function collectAppearanceData() {
+  return {
+    format:'visionflow-appearance-v1', tool:'VisionFlow', source:structuredClone(appearanceSource),
+    origin:structuredClone(appearanceOrigin()), integrationPagePath:appearanceSource.page,
+    pages:[...new Set([appearanceSource.page,...Object.values(appearanceRecords).map(r=>r.page)])].map(page=>({page})),
+    viewport:{desktop:{width:1280,height:720},tablet:{width:768,height:1024},mobile:{width:375,height:812}},
+    resources:structuredClone(importReport),
+    changes:structuredClone(Object.values(appearanceRecords).filter(r=>Object.keys(r.styles).length)),
+    userNotes:appearanceNotes,
+    preview:{kind:'static-appearance-reference',originalProgramIncluded:false,businessBehaviorGuaranteed:false,contentEditing:'disabled'}
+  };
+}
+function validateAppearanceData(data) {
+  if (data?.format !== 'visionflow-appearance-v1' || !Array.isArray(data.changes) || !data.source || typeof data.source.page !== 'string') throw new Error('不是支援的 VisionFlow 外觀檔案。');
+  const origin = validateAppearanceOrigin(data.origin || appearanceOrigin(data.source));
+  if(data.resources !== undefined)validateImportReport(data.resources);
+  if (data.changes.length > 5000 || data.source.page.length > 4096 ||
+      (data.integrationPagePath != null && data.integrationPagePath !== data.source.page) ||
+      origin.entryPath !== data.source.htmlFile || (origin.sourceHash || null) !== (data.source.sourceHash || null))
+    throw new Error('JSON 的來源檔案／頁面／校驗值與整合路徑資料不一致。');
+  if (data.userNotes != null && (typeof data.userNotes !== 'string' || data.userNotes.length > 100000)) throw new Error('外觀說明格式無效。');
+  for (const rec of data.changes) {
+    if (!rec.target || !safeSelector(rec.target.selector) || !['desktop','tablet','mobile'].includes(rec.viewport) || !VALID_STATES.includes(rec.state) || !['this-element','all-matching'].includes(rec.scope) || typeof rec.page !== 'string' || !rec.styles || Array.isArray(rec.styles)) throw new Error('外觀修改的元素／視口／狀態／範圍資料不完整。');
+    if (rec.page !== data.source.page) throw new Error('JSON 的來源檔案／頁面／校驗值不一致；外觀紀錄必須屬於目前入口。');
+    if (rec.scope === 'all-matching' && !safeSelector(rec.matchingSelector)) throw new Error('同類元素 selector 不完整。');
+    if (rec.scope === 'all-matching' && 'translate' in rec.styles) throw new Error('同類元素位置不能共用固定 translate，請拆分成逐元素布局意圖。');
+    for (const [k,v] of Object.entries(rec.styles)) if (!safeAppearanceStyle(k,v)) throw new Error('外觀檔案含有不支援的 CSS 屬性或值。');
+  }
+  return data;
+}
+function importAppearanceData(data, verifiedOrigin = null) {
+  validateAppearanceData(data);
+  appearanceRecords = {};
+  for (const rec of data.changes) appearanceRecords[JSON.stringify([rec.page,rec.target.selector,rec.viewport,rec.state])] = structuredClone(rec);
+  if(data.resources)importReport=structuredClone(data.resources);
+  appearanceSource = structuredClone(data.source); appearanceNotes = data.userNotes || '';
+  appearanceSource.origin = structuredClone(data.origin || appearanceOrigin(data.source));
+  if (verifiedOrigin?.entryPath === appearanceSource.origin.entryPath && !appearanceSource.origin.sourceHash && verifiedOrigin.sourceHash) {
+    appearanceSource.sourceHash = verifiedOrigin.sourceHash;
+    appearanceSource.origin.sourceHash = verifiedOrigin.sourceHash;
+  }
+}
+function stripActiveContent(doc) {
+  doc.querySelectorAll('script:not([type="application/json"]), iframe, object, embed, meta[http-equiv="refresh"]').forEach(n=>n.remove());
+  doc.querySelectorAll('*').forEach(el=>{
+    for (const attr of [...el.attributes]) {
+      if (/^on/i.test(attr.name) || attr.name === 'srcdoc' || (['href','src','action','formaction','xlink:href'].includes(attr.name) && /^\s*(javascript|vbscript):/i.test(attr.value))) el.removeAttribute(attr.name);
+    }
+  });
+}
+function cleanPreviewDocument(doc) {
+  // Only nodes explicitly marked as our helpers are removed, not user's similarly named classes.
+  doc.querySelectorAll('[data-vf-helper], #ui-editor-overlay, #ui-editor-style').forEach(n=>n.remove());
+  doc.getElementById('vf-appearance-styles')?.remove();
+  doc.getElementById('visionflow-appearance-data')?.remove();
+}
+function buildAppearanceHtml() {
+  if (!importedFrame?.contentDocument?.body) throw new Error('請先匯入 HTML，等待畫布載入。');
+  const doc = new DOMParser().parseFromString('<!doctype html>\n' + importedFrame.contentDocument.documentElement.outerHTML,'text/html');
+  for(const [el,props] of previewInlineCache) {
+    let copy;try{copy=doc.querySelector(elementPath(el));}catch{continue;}
+    if(!copy) continue;
+    for(const [key,original] of props) copy.style.setProperty(key,original.value,original.priority);
+    if(!copy.style.length && copy.getAttribute('style')==='') copy.removeAttribute('style');
+  }
+  cleanPreviewDocument(doc); stripActiveContent(doc);
+  doc.querySelectorAll('script').forEach(el=>el.remove());
+  let inlineFallback='';
+  const preservedInline=new Set();
+  for(const rec of Object.values(appearanceRecords).filter(r=>r.page===appearanceSource.page)) {
+    const selector=rec.scope==='all-matching'?rec.matchingSelector:rec.target.selector;
+    if(!safeSelector(selector)) continue;
+    let copies=[];try{copies=[...doc.querySelectorAll(selector)];}catch{continue;}
+    for(const copy of copies) for(const key of Object.keys(rec.styles)) {
+      const identity=elementPath(copy)+':'+key;
+      if(preservedInline.has(identity) || copy.style.getPropertyPriority(key)!=='important') continue;
+      preservedInline.add(identity);
+      const original=copy.style.getPropertyValue(key);
+      inlineFallback+=`${boostSelector(':where('+elementPath(copy)+')')}{${key}:${original} !important}\n`;
+      copy.style.setProperty(key,original,'');
+    }
+  }
+  if(inlineFallback) {
+    let baseline=doc.getElementById('vf-appearance-inline-baseline');
+    if(!baseline) {baseline=doc.createElement('style');baseline.id='vf-appearance-inline-baseline';doc.head.appendChild(baseline);}
+    baseline.textContent+=inlineFallback.replace(/</g,'\\3c ');
+  }
+  const style = doc.createElement('style'); style.id = 'vf-appearance-styles';
+  const records = Object.values(appearanceRecords);
+  // Keep the edited viewport visible even if this file is opened on another
+  // screen size; matching responsive rules remain below and take precedence.
+  style.textContent = (cssRules(records, false, true) + cssRules(records)).replace(/</g,'\\3c ');
+  doc.head.appendChild(style);
+  const metadata = doc.createElement('script'); metadata.type = 'application/json'; metadata.id = 'visionflow-appearance-data';
+  metadata.textContent = JSON.stringify(collectAppearanceData(),null,2).replace(/</g,'\\u003c'); doc.body.appendChild(metadata);
+  const marker = doc.createElement('meta'); marker.name='visionflow-preview'; marker.content='Static appearance reference; not original source; scripts disabled.'; doc.head.appendChild(marker);
+  // Live form property state is intentionally not serialized into the appearance data.
+  return '<!doctype html>\n' + doc.documentElement.outerHTML;
+}
+function downloadAppearance(kind) {
+  try {
+    const artifact=createExportArtifact(kind);
+    downloadTextFile(artifact.content,artifact.filename,kind);
+    markArtifactExported(artifact);
+    setStatus(importedMode ? '已匯出外觀參考；目前修改已備份，可切換入口。請連同原始工程交給 AI，不要取代原工程。' : '已匯出畫布設計。HTML 是純外觀參考；HTML／JSON 可重新匯入繼續編輯。');
+  } catch (e) { sysAlert(e.message); }
+}
+function snapshot(includePageSessions = true) {
+  const targets = importedSelectedElements.filter(el=>el.isConnected).map(el=>ensureImportedState(el).target);
+  const groups = importedLayers.filter(l=>importedGroupIds.has(l.element)).map(l=>({target:ensureImportedState(l.element).target,group:importedGroupIds.get(l.element)}));
+  let staticPreviewHtml = '';
+  if (importedMode && importedFrame?.contentDocument?.body) staticPreviewHtml = buildAppearanceHtml();
+  return JSON.stringify({
+    version:2, importReport, items, selectedId, selectedIds, manualGuides, hiddenDemoGuideKeys, demoGuideTargets,
+    toolPreferences:{snapEnabled:SNAP_CFG.enabled,snapGrid:SNAP_CFG.grid,activeSnapHover},
+    measure:persistedMeasure(), workspacePanels:normalWorkspacePanels(),
+    importedManualGuides, hiddenImportedGuideKeys, importedGuideTargets:importedGuideTargets.filter(el=>el.isConnected).map(el=>ensureImportedState(el).target),
+    activeTheme, importedMode, importedSourceHtml, importedHtml, importedPreparedHtml, staticPreviewHtml, importedDirty, editing, zoom, guideMode, guideArmed,
+    eraserMode, panMode, measureMode, viewportMode, isPositionLocked, appearanceRecords, appearanceSource, appearanceNotes, appearanceState,
+    selectedTargets:targets, groups, importedGroupSeq,
+    folderPagePaths, folderSetKey, exportedAppearanceFingerprint, initialAppearanceFingerprint,
+    ...(includePageSessions ? {pageSessions} : {})
+  });
+}
+function restoreSnapshot(value, fromDraft = false) {
+  cancelBackgroundUpload();
+  const s = readDraftSnapshot(value), sameDocument = importedMode && s.importedMode && s.importedSourceHtml === importedSourceHtml && s.importedHtml === importedHtml;
+  cancelTransientTools(); zoomRevision++; fitImportedOnLoad=false;
+  importRequestSequence++;
+  if (s.pageSessions !== undefined) pageSessions = s.pageSessions || {};
+  folderPagePaths = s.folderPagePaths || []; folderSetKey = s.folderSetKey || '';
+  folderFiles = sourceFileSets.get(folderSetKey) || [];
+  exportedAppearanceFingerprint = s.exportedAppearanceFingerprint ?? null;
+  initialAppearanceFingerprint = s.initialAppearanceFingerprint ?? null;
+  items=s.items||[]; selectedId=s.selectedId; selectedIds=s.selectedIds||[];
+  manualGuides=s.manualGuides||[]; hiddenDemoGuideKeys=s.hiddenDemoGuideKeys||[]; demoGuideTargets=s.demoGuideTargets||[];
+  importedManualGuides=s.importedManualGuides||[]; hiddenImportedGuideKeys=s.hiddenImportedGuideKeys||[];
+  activeTheme=s.activeTheme||'light'; importedMode=!!s.importedMode; importedSourceHtml=s.importedSourceHtml||''; importedHtml=s.importedHtml||'';
+  importedPreparedHtml=s.importedPreparedHtml||s.importedHtml||'';
+  if (fromDraft && s.staticPreviewHtml) importedHtml=s.staticPreviewHtml;
+  importedDirty=!!s.importedDirty; editing=!!s.editing; zoom=s.zoom||1; guideMode=s.guideMode||'hidden'; guidesVisible=guideMode!=='hidden'; guideArmed=!!s.guideArmed;
+  eraserMode=!!s.eraserMode; panMode=!!s.panMode; measureMode=!!s.measureMode; viewportMode=s.viewportMode||'desktop'; isPositionLocked=!!s.isPositionLocked;
+  SNAP_CFG.enabled=s.toolPreferences.snapEnabled; SNAP_CFG.grid=s.toolPreferences.snapGrid; activeSnapHover=s.toolPreferences.activeSnapHover;
+  measureMode=s.measure.enabled; measureState=s.measure.state; measureStart={...s.measure.start}; measureEnd={...s.measure.end};
+  restoreWorkspacePanels(s.workspacePanels);
+  importReport=s.importReport || {warnings:[],externalResources:s.importedMode?VFFolder.describe(s.importedPreparedHtml||s.importedHtml,appearanceOrigin(s.appearanceSource).entryPath).externalResources:[]};
+  appearanceRecords=s.appearanceRecords||{}; appearanceSource=s.appearanceSource||appearanceSource; appearanceNotes=s.appearanceNotes||''; appearanceState=s.appearanceState||'default';
+  importedGroupSeq=s.importedGroupSeq||0;
+  pendingSelection=s.selectedTargets||[]; pendingGroups=s.groups||[]; pendingGuideTargets=s.importedGuideTargets||[];
+  isTyping=false;
+  if (!sameDocument) { importedFrame=null; importedSelected=null; importedSelectedElements=[]; importedLayers=[]; sourceGeneration++; }
+  else { importedLayers.forEach(l=>importedState.delete(l.element)); refreshAppearanceStyles(); restoreImportedIdentity(); }
+  syncAppearanceControls(); applyTheme(themes.find(t=>t.id===activeTheme)||themes[0]); updateToolButtons(); render(); refreshLayoutAndRulers(); scheduleAppearanceSave();
+}
+function restoreImportedIdentity() {
+  importedGroupIds=new WeakMap();
+  pendingGroups.forEach(g=>{const el=findTarget(g.target); if(el) importedGroupIds.set(el,g.group);});
+  importedGuideTargets=pendingGuideTargets.map(t=>findTarget(t)).filter(Boolean);
+  importedSelectedElements=pendingSelection.map(t=>findTarget(t)).filter(Boolean);
+  importedSelected=importedSelectedElements[0]||null;
+  importedSelectedElements.forEach(syncStateContext);
+  const unresolved=Object.values(appearanceRecords).filter(r=>r.page===appearanceSource.page && !findTarget(r.target));
+  if (unresolved.length) sysAlert(`有 ${unresolved.length} 個外觀修改暫時找不到原元素，資料仍保留。可能是脚本生成或結構不同；請重新匯入相應頁面或檢查來源。`);
+  pendingGroups=[]; pendingSelection=[]; pendingGuideTargets=[];
+  updateImportedOverlay(); renderImportedGuides(); updateGroupButtonState();
+}
+function watchImportedLayers() {
+  const frame=importedFrame, doc=frame.contentDocument;
+  let timer;
+  const observer=new MutationObserver(mutations=>{
+    const relevant=mutations.some(m=>!m.target.closest?.('[data-vf-helper]') && [...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1 && !n.matches?.('[data-vf-helper]')));
+    if(!relevant) return;
+    clearTimeout(timer); timer=setTimeout(()=>{
+      if(frame!==importedFrame) {observer.disconnect();return;}
+      importedLayers=[...doc.body.querySelectorAll('*')].filter(isCandidate).filter(el=>{const r=el.getBoundingClientRect();return r.width>0 && r.height>0;}).slice(0,1000).map(element=>({element,name:importedName(element)}));
+      importedSelectedElements=importedSelectedElements.filter(el=>el.isConnected); importedSelected=importedSelectedElements[0]||null;
+      refreshAppearanceStyles(); renderLayers(); updateImportedOverlay(); invalidateSnapGeometry();
+    },80);
+  });
+  observer.observe(doc.body,{childList:true,subtree:true});
+}
+function scheduleAppearanceSave() {
+  clearTimeout(appearanceAutosaveTimer);
+  if (maintenanceStoragePaused) return;
+  if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) return;
+  appearanceAutosaveTimer=setTimeout(()=>performQuickSave(true),350);
+}
+function performQuickSave(silent = false) {
+  try {
+    if (maintenanceStoragePaused) return false;
+    if (draftRecoveryBlocked) { setStatus('原草稿無法恢復，已停止自動覆寫；請先下載草稿備份。'); return false; }
+    if (snapDragActive || guideDrag || isPanning || isErasing || isMarquee) { if (!silent) setStatus('手勢進行中，請完成拖動後再暫存；尚未覆寫草稿。'); return false; }
+    const previous=localStorage.getItem(DRAFT_KEY);
+    if (previous !== null) {
+      try { readDraftSnapshot(previous); }
+      catch { draftRecoveryBlocked=true; clearTimeout(appearanceAutosaveTimer); setStatus('已存草稿版本或內容已改變，停止自動覆寫；請先下載草稿備份。'); return false; }
+    }
+    const value=snapshot();
+    if (previous !== null && JSON.parse(previous).version === 1 && localStorage.getItem(DRAFT_KEY+'-backup-before-v2') === null)
+      localStorage.setItem(DRAFT_KEY+'-backup-before-v2',previous);
+    localStorage.setItem(DRAFT_KEY,value); importedDirty=false; updateLegacyDraftBackupButton();
+    if (!silent) setStatus('外觀資料與原始來源已存入此瀏覽器。刷新可恢復；重要修改請另行匯出。');
+    return true;
+  } catch (e) { setStatus('草稿儲存失敗（容量或瀏覽器權限）；請立即匯出外觀 HTML／JSON。'); return false; }
+}
+function syncAppearanceControls() {
+  document.getElementById('vf-project-name').value=appearanceSource.projectName||'';
+  document.getElementById('vf-page-path').value=appearanceSource.page||'/';
+  document.getElementById('vf-user-notes').value=appearanceNotes;
+  document.getElementById('vf-edit-state').value=appearanceState;
+  document.getElementById('export').textContent = importedMode ? '匯出外觀 HTML' : '匯出畫布 HTML';
+  document.getElementById('export-json').textContent = importedMode ? '匯出外觀 JSON' : '匯出畫布 JSON';
+  renderImportReport();
+  refreshEntryPagesControl();
+}
+function previewSource(html) {
+  const doc=new DOMParser().parseFromString(html,'text/html'); cleanPreviewDocument(doc);
+  if (trustedScripts) doc.querySelectorAll('script[type="application/x-vf-disabled-script"]').forEach(el=>{
+    el.type=el.getAttribute('data-vf-original-type')||'text/javascript';
+    el.removeAttribute('data-vf-original-type');
+  });
+  if (!trustedScripts) stripActiveContent(doc);
+  return '<!doctype html>\n'+doc.documentElement.outerHTML;
+}
+function setFolderImportStatus(message, state = 'info') {
+  const output=document.getElementById('folder-import-status');
+  if(!output)return;
+  output.textContent=message;output.dataset.state=state;output.hidden=!message;
+}
+async function loadSelectedFiles(files, entryPath, switchingPage = false) {
+  const fromFolder=files.some(file=>!!file.webkitRelativePath);
+  if(fromFolder)setFolderImportStatus(`已選取 ${files.length.toLocaleString()} 個檔案，正在檢查 HTML 入口及資源…`,'loading');
+  if (updateRequested || maintenanceStoragePaused) { setStatus('更新／維護正在套用，未匯入新檔；請完成後重新選擇。'); if(fromFolder)setFolderImportStatus('目前正在更新／維護，資料夾尚未匯入。','error'); return; }
+  cancelBackgroundUpload();
+  const request = ++importRequestSequence;
+  pendingImportRequest = request;
+  try {
+    if (draftRecoveryBlocked) throw new Error('原草稿仍受保護，請先下載草稿備份並在另一瀏覽器工作區開啟新專案。');
+    if (switchingPage && hasUnexportedAppearanceChanges()) {
+      refreshEntryPagesControl(); throw new Error('切換入口前請先匯出目前頁面的外觀檔案；匯出後即可切換，修改會保留。');
+    }
+    const json=files.find(f=>/\.json$/i.test(f.name) && !f.webkitRelativePath);
+    if (json && !files.some(f=>/\.html?$/i.test(f.name))) {
+      if (json.size > 25000000) throw new Error('專案 JSON 超過 25 MB。');
+      const raw = JSON.parse(await readFileText(json));
+      if (request !== importRequestSequence) return;
+      if (raw?.format === CANVAS_FORMAT) { importCanvasData(raw); return; }
+      const data=validateAppearanceData(raw);
+      if (!importedMode) throw new Error('請先匯入對應原始 HTML，然後再匯入外觀 JSON。');
+      requireMatchingAppearanceSource(data);
+      const verifiedOrigin=structuredClone(appearanceOrigin());
+      savePoint(); importAppearanceData(data,verifiedOrigin); exportedAppearanceFingerprint=null;
+      importedLayers.forEach(l=>importedState.delete(l.element));
+      refreshAppearanceStyles(); importedSelectedElements.forEach(syncStateContext); renderImportedInspector();
+      syncAppearanceControls(); scheduleAppearanceSave(); setStatus('已載入外觀 JSON；整合路徑已保留，原始 HTML 未被覆寫。'); return;
+    }
+    if (!files.some(f=>/\.html?$/i.test(f.name))) throw new Error('沒有找到 HTML 入口頁；請選擇 .html 或包含入口頁的資料夾。');
+    const prepared=await VFFolder.prepare(files,entryPath);
+    const preparedReport=validateImportReport({warnings:prepared.warnings.filter(w=>!w.startsWith('Disabled ')),externalResources:prepared.externalResources});
+    const entryFile=files.find(f=>(f.webkitRelativePath||f.name)===prepared.entryPath || (f.webkitRelativePath||f.name).endsWith('/'+prepared.entryPath));
+    if (!entryFile) throw new Error('找不到所選入口的原始檔案。');
+    const original=await readFileText(entryFile), doc=new DOMParser().parseFromString(prepared.html,'text/html');
+    if (request !== importRequestSequence) return;
+    const canvasMetadata = doc.getElementById('visionflow-canvas-data');
+    if (canvasMetadata) { importCanvasData(JSON.parse(canvasMetadata.textContent)); return; }
+    const embedded=doc.getElementById('visionflow-appearance-data');
+    let data=null; if (embedded) data=validateAppearanceData(JSON.parse(embedded.textContent));
+    const hash=globalThis.crypto?.subtle ? [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(original)))].map(n=>n.toString(16).padStart(2,'0')).join('') : null;
+    if (request !== importRequestSequence) return;
+    if (switchingPage && hasUnexportedAppearanceChanges()) throw new Error('載入期間目前頁又有修改，請先重新匯出；原畫布仍保留。');
+    const origin={entryPath:prepared.entryPath, sourceHash:hash, schemaVersion:1};
+    const paths=prepared.pages.map(p=>p.path);
+    const reselectedCurrentSource = importedMode && origin.entryPath===appearanceOrigin().entryPath && hash && hash===appearanceOrigin().sourceHash && JSON.stringify(paths)===JSON.stringify(folderPagePaths);
+    const reselectedCachedSource = importedMode && !folderFiles.length && hash && JSON.stringify(paths)===JSON.stringify(folderPagePaths) && !!pageSessions[pageSessionKey(origin)];
+    const keepWorkspace = switchingPage || reselectedCurrentSource || reselectedCachedSource;
+    savePoint();
+    if (keepWorkspace) {
+      if (importedMode) pageSessions[pageSessionKey()] = snapshot(false);
+    } else { pageSessions={}; folderSetKey=globalThis.crypto?.randomUUID?.() || `files-${Date.now()}-${sourceGeneration}`; }
+    sourceFileSets.set(folderSetKey,files); folderFiles=files; folderPagePaths=paths;
+    const cached=keepWorkspace && pageSessions[pageSessionKey(origin)];
+    if (cached) {
+      restoreSnapshot(cached); syncAppearanceControls(); scheduleAppearanceSave();
+      if(fromFolder)setFolderImportStatus(`已恢復資料夾入口「${prepared.entryPath}」，共 ${prepared.pages.length} 個 HTML 頁面；預覽正在載入。`,'loading');
+      setStatus('已切換入口，先前的外觀修改仍保留。'); return;
+    }
+    sourceGeneration++; importedMode=true; importedSourceHtml=original; importedPreparedHtml=prepared.html; importedHtml=prepared.html;
+    importReport=preparedReport;
+    appearanceRecords={}; appearanceSource={htmlFile:prepared.entryPath,projectName:'',page:'/'+prepared.entryPath,sourceHash:hash,origin}; appearanceNotes='';
+    exportedAppearanceFingerprint=null; appearanceState='default';
+    if (data) importAppearanceData(data);
+    initialAppearanceFingerprint=appearanceFingerprint();
+    folderFiles=files; importedDirty=false; importedFrame=null; importedSelected=null; importedSelectedElements=[]; importedLayers=[];
+    importedGroupIds=new WeakMap(); importedGroupSeq=0; importedManualGuides=[]; importedGuideTargets=[]; hiddenImportedGuideKeys=[];
+    pendingSelection=[]; pendingGroups=[]; pendingGuideTargets=[]; editing=true; isTyping=false; isIframeLoaded=false;
+    const pageSelect=document.getElementById('vf-entry-page');
+    pageSelect.innerHTML=prepared.pages.map(p=>`<option value="${escapeHtml(p.path)}" ${p.path === prepared.entryPath ? 'selected' : ''}>${escapeHtml(p.path)}</option>`).join('');
+    pageSelect.disabled=prepared.pages.length<2;
+    cancelTransientTools(); measureState='idle'; measureStart={x:0,y:0}; measureEnd={x:0,y:0}; fitImportedOnLoad=true;
+    syncAppearanceControls(); updateToolButtons(); renderImportedState(); scheduleAppearanceSave();
+    if(fromFolder)setFolderImportStatus(`已找到 ${prepared.pages.length} 個 HTML 入口；正在載入「${prepared.entryPath}」預覽…`,'loading');
+    const message='只編輯目前入口頁。'+(trustedScripts ? '可信脚本預覽已開啟，執行狀態不保證可保存。' : '脚本預設停用；原始程式保留於來源，不進入外觀 JSON。');
+    setStatus(message);
+    const warnings=prepared.warnings.filter(w=>!w.startsWith('Disabled '));
+    if (warnings.length) sysAlert('匯入限制／缺少資源：\n'+warnings.join('\n'));
+  } catch(e) { if (request !== importRequestSequence) return; refreshEntryPagesControl(); if(fromFolder)setFolderImportStatus('資料夾匯入失敗：'+e.message,'error'); sysAlert('匯入失敗：'+e.message); setStatus('匯入失敗，原畫布未被替換。'); }
+  finally { if (pendingImportRequest === request) pendingImportRequest = null; }
+}
+function initializeAppearanceEditor() {
+  document.getElementById('export-json').addEventListener('click',()=>downloadAppearance('json'));
+  document.getElementById('vf-edit-state').addEventListener('change',e=>{
+    cancelBackgroundUpload(); savePoint(); appearanceState=e.target.value; importedSelectedElements.forEach(el=>{const s=ensureImportedState(el);s.context='';});
+    refreshAppearanceStyles(); importedSelectedElements.forEach(syncStateContext); updateImportedOverlay(); renderImportedInspector(); scheduleAppearanceSave();
+  });
+  for (const id of ['vf-project-name','vf-page-path','vf-user-notes']) for(const type of ['input','change']) document.getElementById(id).addEventListener(type,e=>{
+    const current=id==='vf-project-name'?appearanceSource.projectName||'':id==='vf-page-path'?appearanceSource.page:appearanceNotes;
+    if((id==='vf-page-path'?(e.target.value||'/'):e.target.value)===current)return;
+    savePoint();
+    if(id==='vf-project-name') appearanceSource.projectName=e.target.value;
+    if(id==='vf-user-notes') appearanceNotes=e.target.value;
+    if(id==='vf-page-path') { const previous=appearanceSource.page; appearanceSource.page=e.target.value||'/'; for(const r of Object.values(appearanceRecords)) if(r.page===previous) r.page=appearanceSource.page; appearanceRecords=Object.fromEntries(Object.values(appearanceRecords).map(r=>[JSON.stringify([r.page,r.target.selector,r.viewport,r.state]),r])); }
+    refreshAppearanceStyles(); scheduleAppearanceSave();
+  });
+  document.getElementById('vf-entry-page').addEventListener('change',e=>{
+    const path=e.target.value;
+    if (hasUnexportedAppearanceChanges()) { refreshEntryPagesControl(); sysAlert('切換入口前請先匯出目前頁面的外觀檔案；匯出後即可切換，修改會保留。'); return; }
+    loadSelectedFiles(folderFiles,path,true);
+  });
+  document.getElementById('vf-trusted-scripts').addEventListener('change',e=>{
+    trustedScripts=e.target.checked;
+    if (!importedMode) return;
+    // Explicit opt-in only; trust is never persisted across sessions.
+    importedHtml=importedPreparedHtml||importedSourceHtml; importedFrame=null; importedSelected=null; importedSelectedElements=[]; importedLayers=[]; sourceGeneration++;
+    renderImportedState(); setStatus(trustedScripts?'已啟用可信脚本；不要匯入不可信頁面，執行狀態不保證可保存。':'脚本已停用，外觀修改仍保留。');
+  });
+  window.addEventListener('beforeunload',()=>performQuickSave(true));
+  window.addEventListener('pagehide',()=>performQuickSave(true));
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden') performQuickSave(true);});
+  document.querySelector('.main-toolbar').addEventListener('click',()=>scheduleAppearanceSave());
+  document.getElementById('vf-backup-draft').addEventListener('click',downloadDraftBackup);
+  document.getElementById('vf-backup-v1').addEventListener('click',()=>downloadDraftBackup(true));
+  updateLegacyDraftBackupButton();
+  syncAppearanceControls();
+  try {
+    const draft=localStorage.getItem(DRAFT_KEY);
+    if(draft !== null) { restoreSnapshot(draft,true); setStatus(restoredDraftMessage()); }
+  } catch(e) { draftRecoveryBlocked=true; clearTimeout(appearanceAutosaveTimer); setStatus('無法恢復草稿：'+e.message+'。已停止自動覆寫，請用「備份草稿」下載原始資料。'); }
+}
+</script>
+  <script>
+'use strict';
+
+let maintenanceBusy = false;
+let maintenanceStoragePaused = false;
+
+function editorScope() { return new URL('./', location.href); }
+function maintenanceResult(text) {
+  document.getElementById('vf-maintenance-result').textContent = text;
+  setStatus(text);
+}
+function maintenanceControls(busy) {
+  maintenanceBusy = busy;
+  document.querySelectorAll('#vf-maintenance-dialog button[data-maintenance]').forEach(button => { button.disabled = busy; });
+  document.getElementById('vf-maintenance-close').disabled = busy;
+  updateAvailability();
+}
+function maintenanceGestureActive() {
+  return !!(cancelEditorGesture || snapDragActive || guideDrag || isPanning || isErasing || isMarquee);
+}
+function hasPendingEditorInput() {
+  return (pendingImportRequest !== null && pendingImportRequest === importRequestSequence) ||
+    (pendingBackgroundRequest !== null && pendingBackgroundRequest === backgroundRequestSequence) ||
+    (importedMode && !isIframeLoaded);
+}
+function waitForEditorWorker(worker) {
+  if (!worker || ['installed', 'activated', 'redundant'].includes(worker.state)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const finish = error => {
+      clearTimeout(timer); worker.removeEventListener('statechange', changed);
+      error ? reject(error) : resolve();
+    };
+    const changed = () => { if (['installed', 'activated', 'redundant'].includes(worker.state)) finish(); };
+    const timer = setTimeout(() => finish(new Error('新版安裝尚未完成，未刷新或清理；請稍後重試。')), 30000);
+    worker.addEventListener('statechange', changed); changed();
+  });
+}
+async function checkEditorUpdate() {
+  if (maintenanceBusy || updateRequested) return;
+  maintenanceControls(true); maintenanceResult('正在檢查更新，沒有清除設計或重新載入。');
+  try {
+    await offlineInitialization;
+    if (!editorRegistration) throw new Error('此環境未提供應用更新；請使用 HTTPS 網站並連上網路。');
+    if (!navigator.onLine) throw new Error('目前離線，未檢查到伺服器版本；請先連網。');
+    await editorRegistration.update();
+    const worker = editorRegistration.installing;
+    await waitForEditorWorker(worker);
+    if (worker?.state === 'redundant') throw new Error('新版套件未能完整安裝，已保留目前版本，請稍後重試。');
+    maintenanceResult(editorRegistration.waiting ? '新版已完整下載。按「保存並更新」才套用；目前設計未被清除。' : '檢查完成，未發現待套用的新版本；沒有重新載入或清除設計。');
+  } catch (error) { maintenanceResult('更新未完成：' + error.message); }
+  finally { maintenanceControls(false); }
+}
+function countEditorClients(worker) {
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const close = () => { clearTimeout(timer); channel.port1.close(); channel.port2.close(); };
+    const timer = setTimeout(() => { close(); reject(new Error('無法確認其他編輯分頁，未清理。請先套用新版、關閉其他 VisionFlow 分頁再重試。')); }, 5000);
+    channel.port1.onmessage = event => {
+      if (event.data?.type !== 'VF_EDITOR_CLIENT_COUNT' || !Number.isInteger(event.data.count)) return;
+      const count = event.data.count; close(); resolve(count);
+    };
+    try { worker.postMessage({type:'VF_MAINTENANCE_CHECK'}, [channel.port2]); }
+    catch (error) { close(); reject(error); }
+  });
+}
+async function maintenanceRegistrations() {
+  if (location.protocol === 'file:' || !isSecureContext || !navigator.serviceWorker) return [];
+  const registrations = (await navigator.serviceWorker.getRegistrations()).filter(registration => registration.scope === editorScope().href);
+  for (const registration of registrations) {
+    await waitForEditorWorker(registration.installing);
+    const worker = registration.waiting || registration.active || registration.installing;
+    if (worker && worker.state !== 'redundant' && await countEditorClients(worker) > 1)
+      throw new Error('請先關閉其他 VisionFlow 分頁／桌面 App，再清理；沒有刪除資料或刷新其他分頁。');
+  }
+  return registrations;
+}
+async function checkMaintenanceNetwork() {
+  if (location.protocol === 'file:') return;
+  if (!navigator.onLine) throw new Error('請先連上網路再清理，避免刪除離線快取後無法重新開啟。');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    // sw.js is deliberately not in the shell cache, so this checks the real network.
+    const url = new URL('sw.js', editorScope()); url.searchParams.set('maintenance-check', Date.now());
+    const response = await fetch(url, {cache:'no-store', signal:controller.signal});
+    if (!response.ok || !/const APP_VERSION\s*=/.test(await response.text())) throw new Error('伺服器尚未可用；未清理，請稍後重試。');
+  } finally { clearTimeout(timer); }
+}
+async function clearScopedEditorCaches() {
+  if (location.protocol === 'file:' || !isSecureContext || !globalThis.caches) return 0;
+  const scope = editorScope(), prefix = 'visionflow-app:' + encodeURIComponent(scope.href) + ':';
+  let removed = 0;
+  for (const name of await caches.keys()) {
+    if (name.startsWith(prefix)) { if (await caches.delete(name)) removed++; continue; }
+    if (!/^visionflow[-:]/.test(name)) continue;
+    // Legacy caches had no scope in their name: preserve entries from other apps.
+    const cache = await caches.open(name), requests = await cache.keys();
+    const own = requests.filter(request => {
+      const url = new URL(request.url); return url.origin === scope.origin && url.pathname.startsWith(scope.pathname);
+    });
+    if (!own.length) continue;
+    if (own.length === requests.length) { if (await caches.delete(name)) removed++; }
+    else for (const request of own) { if (await cache.delete(request)) removed++; }
+  }
+  return removed;
+}
+function removeEditorDrafts() {
+  const keys = [DRAFT_KEY, DRAFT_KEY + '-backup-before-v2'];
+  const originals = keys.map(key => [key, localStorage.getItem(key)]);
+  try { keys.forEach(key => localStorage.removeItem(key)); }
+  catch (error) {
+    let restored = true;
+    for (const [key, value] of originals) {
+      try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value); }
+      catch { restored = false; }
+    }
+    throw new Error(restored ? '草稿刪除失敗，原始資料已回復，未重新載入。' : '草稿刪除失敗且可能部分刪除；請立即匯出目前設計，未重新載入。');
+  }
+}
+async function clearEditorStorage(factory = false) {
+  if (maintenanceBusy || updateRequested || sharingBusy) return;
+  if (maintenanceGestureActive()) { maintenanceResult('請先完成或取消目前手勢，再清理；沒有刪除資料。'); return; }
+  if (!factory && hasPendingEditorInput()) { maintenanceResult('匯入／貼圖尚未完成，未清理或取消它；請等待完成，或明確取消輸入後重試。'); return; }
+  const message = factory
+    ? '恢復出廠狀態會刪除 VisionFlow 已保存草稿、升級前備份、設定及目前未匯出的設計，無法撤銷。請先下載 HTML／JSON 或草稿備份，並關閉其他 VisionFlow 分頁。原始檔案及其他網站資料不受影響。確定還原？'
+    : '清除所有 VisionFlow 程式暫存並重新載入？會先保存目前設計，保留草稿及備份；請先關閉其他 VisionFlow 分頁。不會清整個瀏覽器或其他網站資料。';
+  if (!window.confirm(message)) { maintenanceResult('已取消，沒有清理或還原。'); return; }
+  maintenanceControls(true);
+  let navigating = false;
+  try {
+    await offlineInitialization;
+    await checkMaintenanceNetwork();
+    const registrations = await maintenanceRegistrations();
+    if (!factory && hasPendingEditorInput()) throw new Error('匯入／貼圖尚未完成，未清理或取消它；請等待完成或取消後重試。');
+    if (!factory && !performQuickSave()) throw new Error('設計尚未安全保存，未清理。請先下載設計或草稿備份。');
+    maintenanceStoragePaused = true; clearTimeout(appearanceAutosaveTimer);
+    cancelBackgroundUpload(); importRequestSequence++;
+    for (const registration of registrations) {
+      if (!await registration.unregister()) throw new Error('離線註冊未能安全取消，未繼續刪除快取；請重試。');
+    }
+    await clearScopedEditorCaches();
+    if (factory) { removeEditorDrafts(); draftRecoveryBlocked = false; }
+    editorRegistration = null;
+    maintenanceResult(factory ? '出廠還原完成，正在重新載入空白預設；原始檔案及其他網站未改動。' : '程式暫存已清除，設計已保存，正在重新載入。');
+    const target = new URL(editorLink()); target.searchParams.set('vf-refresh', Date.now());
+    navigating = true; location.replace(target.href);
+  } catch (error) {
+    maintenanceResult('維護未完成：' + error.message + ' 若已取消離線註冊，重新連網開啟即可重建；目前設計仍可匯出。');
+  } finally {
+    if (!navigating) { maintenanceStoragePaused = false; maintenanceControls(false); }
+  }
+}
+function initializeMaintenance() {
+  document.getElementById('vf-maintenance').addEventListener('click', () => {
+    document.getElementById('vf-maintenance-version').textContent = document.querySelector('meta[name="visionflow-app-version"]').content;
+    document.getElementById('vf-maintenance-dialog').showModal(); updateAvailability();
+  });
+  document.getElementById('vf-maintenance-dialog').addEventListener('cancel', event => { if (maintenanceBusy) event.preventDefault(); });
+  window.addEventListener('keydown', event => {
+    if (document.getElementById('vf-maintenance-dialog').open) event.stopPropagation();
+  }, true);
+  document.getElementById('vf-maintenance-check').addEventListener('click', checkEditorUpdate);
+  document.getElementById('vf-maintenance-apply').addEventListener('click', requestEditorUpdate);
+  document.getElementById('vf-maintenance-clear').addEventListener('click', () => clearEditorStorage(false));
+  document.getElementById('vf-maintenance-factory').addEventListener('click', () => clearEditorStorage(true));
+  document.getElementById('vf-maintenance-backup').addEventListener('click', () => downloadDraftBackup());
+}
+</script>
+  <script>
+'use strict';
+
+let editorRegistration = null;
+let updateRequested = false;
+let sharingBusy = false;
+let offlineInitialization = Promise.resolve();
+
+async function copyEditorText(text, fallback) {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('unsupported');
+    await navigator.clipboard.writeText(text); return true;
+  } catch {
+    if (fallback) { fallback.focus(); fallback.select(); }
+    return false;
+  }
+}
+function editorLink() {
+  const url=new URL(location.href); url.search=''; url.hash=''; return url.href;
+}
+function shareArtifactDescription() {
+  const result=document.getElementById('vf-share-result');
+  try {
+    const artifact=createExportArtifact(document.getElementById('vf-share-format').value);
+    document.getElementById('vf-share-preview').textContent=`${artifact.filename} · ${new Blob([artifact.content]).size.toLocaleString()} bytes`;
+    result.textContent='分享的是目前設計檔，不是原工程，也不是公開設計連結。含頁面文字／圖片及交接說明，請只交給信任的接收者。';
+  } catch(error) { result.textContent=error.message; }
+}
+async function shareCurrentArtifact() {
+  if (sharingBusy) return;
+  const result=document.getElementById('vf-share-result'), send=document.getElementById('vf-share-send');
+  try {
+    // Build synchronously inside the user's click: don't lose transient activation.
+    const artifact=createExportArtifact(document.getElementById('vf-share-format').value);
+    const file=new File([artifact.content],artifact.filename,{type:artifact.kind==='html'?'text/html':'application/json'});
+    if (!navigator.share || !navigator.canShare?.({files:[file]})) {
+      result.textContent='瀏覽器不支援分享這類檔案。請用「下載檔案」後，透過你自己的通訊軟體傳送；未對外傳送。'; return;
+    }
+    sharingBusy=true;send.disabled=true;
+    await navigator.share({files:[file],title:'VisionFlow 外觀參考',text:'靜態外觀參考，不是原工程；請連同原始工程整合。'});
+    markArtifactExported(artifact);
+    result.textContent='已交予系統分享；請確認接收者收到檔案。若之後再修改，需再次匯出／分享。';
+  } catch(error) {
+    result.textContent=error.name==='AbortError'?'分享已取消，或沒有可用接收程式；未標記已匯出。':`分享未完成：${error.message}。可改用「下載檔案」後手動傳送。`;
+  } finally { sharingBusy=false;send.disabled=false; }
+}
+function downloadSharedArtifact() {
+  try {
+    const artifact=createExportArtifact(document.getElementById('vf-share-format').value);
+    downloadTextFile(artifact.content,artifact.filename,artifact.kind);markArtifactExported(artifact);
+    document.getElementById('vf-share-result').textContent='已開始下載安全設計檔；請自行傳送。沒有上傳雲端或產生公開連結。';
+  } catch(error) { document.getElementById('vf-share-result').textContent=error.message; }
+}
+function handleLaunchRequest() {
+  const url=new URL(location.href), params=url.searchParams;
+  const action=params.get('action');
+  if (action==='new' || action==='import') {
+    document.querySelector('.workspace').classList.remove('left-closed');scheduleLayoutRefresh();
+    document.getElementById('file-input').focus();
+    if(action==='new')setStatus('已開啟專案面板，未清除草稿。請先匯出備份；需要空白設計時使用「清空畫布」，可復原。');
+    params.delete('action');
+  }
+  const received=['title','text','url'].map(key=>params.get(key)||'');
+  if(received.some(Boolean)) {
+    if(received[0].length>2000 || received[1].length>100000 || received[2].length>10000) {
+      sysAlert('分享文字太長，未套用或執行。請改以設計檔案匯入。');
+    } else {
+      const text=received.filter(Boolean).join('\n');
+      document.getElementById('vf-inbox-text').value=text;
+      const add=document.getElementById('vf-inbox-add');
+      add.disabled=draftRecoveryBlocked;
+      document.getElementById('vf-inbox-result').textContent='只接收文字／網址，不會自動載入網頁。按下方按鈕才加入目前設計的交接說明；畫布說明最多10000字元。';
+      document.getElementById('vf-inbox-dialog').showModal();
+    }
+    ['title','text','url'].forEach(key=>params.delete(key));
+  }
+  // Remove received text from this tab's URL without reloading or touching designs.
+  window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+}
+function addReceivedNotes() {
+  const result=document.getElementById('vf-inbox-result');
+  if(draftRecoveryBlocked){result.textContent='請先備份草稿並匯入原頁面；沒有修改目前設計。';return;}
+  const joined=[appearanceNotes,document.getElementById('vf-inbox-text').value].filter(Boolean).join('\n\n');
+  const limit=importedMode?100000:10000;
+  if(joined.length>limit){result.textContent=`合併後說明超過${limit}字元，未修改；請先複製並縮短。`;return;}
+  savePoint();appearanceNotes=joined;syncAppearanceControls();scheduleAppearanceSave();
+  document.getElementById('vf-inbox-dialog').close();setStatus('已將收到的文字／網址加入交接說明，沒有抓取網址或執行內容。');
+}
+function updateAvailability() {
+  const button=document.getElementById('vf-update-app');
+  button.hidden=!editorRegistration?.waiting;
+  button.disabled=maintenanceBusy || updateRequested;
+  const apply=document.getElementById('vf-maintenance-apply');
+  apply.hidden=!editorRegistration?.waiting;
+  apply.disabled=maintenanceBusy || updateRequested;
+  if(editorRegistration?.waiting)document.getElementById('vf-offline-state').textContent='有新版待更新（先保存草稿）';
+}
+function offlineState(message) { document.getElementById('vf-offline-state').textContent=message; }
+async function initializeOfflineEditor() {
+  if(location.protocol==='file:') { offlineState('本地檔案模式：無應用快取，仍可匯入／下載');return; }
+  if(!isSecureContext || !navigator.serviceWorker) { offlineState('此瀏覽器／環境未提供離線快取');return; }
+  try {
+    editorRegistration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
+    function trackWorker(worker) {
+      if(!worker)return;
+      worker.addEventListener('statechange',()=>{updateAvailability();if(worker.state==='activated'&&!editorRegistration.waiting)offlineState(navigator.onLine?'應用離線快取就緒；外部資源仍需網路':'離線模式；外部資源可能不可用');});
+    }
+    trackWorker(editorRegistration.installing);
+    editorRegistration.addEventListener('updatefound',()=>trackWorker(editorRegistration.installing));
+    updateAvailability();
+    navigator.serviceWorker.ready.then(()=>{if(!editorRegistration.waiting)offlineState(navigator.onLine?'應用離線快取就緒；外部資源仍需網路':'離線模式；外部資源可能不可用');});
+    navigator.serviceWorker.addEventListener('message',event=>{
+      if(event.data?.type==='VF_UPDATE_BLOCKED') {updateRequested=false;updateAvailability();setStatus(event.data.message);}
+    });
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!updateRequested)return;
+      updateRequested=false;
+      if(hasPendingEditorInput()) {setStatus('新版已啟用，但匯入／貼圖仍在處理，未刷新；請完成後再安全重新載入。');return;}
+      if(performQuickSave(true))location.reload();
+      else setStatus('新版已啟用，但草稿保存失敗，未刷新目前設計；請先下載備份。');
+    });
+    window.addEventListener('offline',()=>offlineState('離線模式；外部資源可能不可用'));
+    window.addEventListener('online',()=>{updateAvailability();if(!editorRegistration.waiting)offlineState('網路已恢復；外部資源仍依賴網路');});
+  } catch(error) { offlineState('離線快取未建立：'+error.message+'；編輯／下載仍可用'); }
+}
+function requestEditorUpdate() {
+  if(maintenanceBusy)return;
+  if(!editorRegistration?.waiting || updateRequested)return;
+  if(hasPendingEditorInput()) {setStatus('匯入／貼圖尚未完成，未更新或取消它；請等待完成或明確取消後重試。');return;}
+  if(!performQuickSave()) {setStatus('尚未安全保存草稿，未更新或刷新；請完成手勢或先下载備份。');return;}
+  updateRequested=true;document.getElementById('vf-update-app').disabled=true;
+  updateAvailability();
+  setStatus('草稿已保存，正在請求新版；若有其他分頁請先關閉。');
+  editorRegistration.waiting.postMessage({type:'VF_ACTIVATE_UPDATE'});
+}
+function initializeDelivery() {
+  document.getElementById('vf-share').addEventListener('click',()=>{shareArtifactDescription();document.getElementById('vf-share-dialog').showModal();});
+  document.getElementById('vf-share-format').addEventListener('change',shareArtifactDescription);
+  document.getElementById('vf-share-send').addEventListener('click',shareCurrentArtifact);
+  document.getElementById('vf-share-download').addEventListener('click',downloadSharedArtifact);
+  document.getElementById('vf-share-copy-link').addEventListener('click',async()=>{
+    const field=document.getElementById('vf-editor-link');field.hidden=false;field.value=editorLink();
+    const copied=await copyEditorText(field.value,field);
+    document.getElementById('vf-share-result').textContent=copied?'已複製編輯器網址（不含設計）。要分享設計請傳送上方檔案。':'剪貼簿不可用，已選取編輯器網址，請手動複製；不含設計。';
+  });
+  document.getElementById('vf-copy-resources').addEventListener('click',async()=>{
+    const field=document.getElementById('vf-resource-text'), copied=await copyEditorText(importReportText(),field);
+    setStatus(copied?'已複製完整資源報告。':'剪貼簿不可用，已選取完整報告，請手動複製。');
+  });
+  document.getElementById('vf-inbox-copy').addEventListener('click',async()=>{
+    const field=document.getElementById('vf-inbox-text');document.getElementById('vf-inbox-result').textContent=await copyEditorText(field.value,field)?'已複製收到的文字。':'剪貼簿不可用，已選取文字，請手動複製。';
+  });
+  document.getElementById('vf-inbox-add').addEventListener('click',addReceivedNotes);
+  document.getElementById('vf-update-app').addEventListener('click',requestEditorUpdate);
+  initializeMaintenance();handleLaunchRequest();offlineInitialization=initializeOfflineEditor();
+}
+</script>
+  <script>
+(() => {
+  const toolbar = document.querySelector('#main-toolbar');
+  const scrollbar = document.querySelector('#toolbar-scrollbar');
+  const track = scrollbar?.querySelector('.toolbar-scrollbar-track');
+  const thumb = scrollbar?.querySelector('.toolbar-scrollbar-thumb');
+  if (!toolbar || !scrollbar || !track || !thumb) return;
+
+  let frame = 0;
+  let scrollbarDrag = null;
+  let toolbarDrag = null;
+
+  function maxScroll() {
+    return Math.max(0, toolbar.scrollWidth - toolbar.clientWidth);
+  }
+
+  function updateScrollbar() {
+    frame = 0;
+    const max = maxScroll();
+    scrollbar.hidden = max <= 1;
+    scrollbar.setAttribute('aria-valuemax', String(Math.round(max)));
+    scrollbar.setAttribute('aria-valuenow', String(Math.round(toolbar.scrollLeft)));
+    if (max <= 1) return;
+
+    const width = track.clientWidth;
+    const thumbWidth = Math.min(width, Math.max(36, width * toolbar.clientWidth / toolbar.scrollWidth));
+    const travel = Math.max(0, width - thumbWidth);
+    thumb.style.width = `${thumbWidth}px`;
+    thumb.style.transform = `translateX(${travel * toolbar.scrollLeft / max}px)`;
+  }
+
+  function scheduleUpdate() {
+    if (!frame) frame = requestAnimationFrame(updateScrollbar);
+  }
+
+  toolbar.addEventListener('scroll', scheduleUpdate, { passive: true });
+  window.addEventListener('resize', scheduleUpdate);
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(scheduleUpdate);
+    observer.observe(toolbar);
+    for (const child of toolbar.children) observer.observe(child);
+  }
+  scheduleUpdate();
+
+  scrollbar.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || scrollbar.hidden) return;
+    const rect = track.getBoundingClientRect();
+    const thumbWidth = thumb.getBoundingClientRect().width;
+    const travel = Math.max(1, rect.width - thumbWidth);
+    if (!thumb.contains(event.target)) {
+      const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left - thumbWidth / 2) / travel));
+      toolbar.scrollLeft = fraction * maxScroll();
+    }
+    event.preventDefault();
+    scrollbar.setPointerCapture(event.pointerId);
+    scrollbarDrag = { pointerId: event.pointerId, startX: event.clientX, startScroll: toolbar.scrollLeft, travel };
+  });
+
+  scrollbar.addEventListener('pointermove', event => {
+    if (!scrollbarDrag || scrollbarDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const max = maxScroll();
+    toolbar.scrollLeft = scrollbarDrag.startScroll + (event.clientX - scrollbarDrag.startX) * max / scrollbarDrag.travel;
+  });
+
+  function finishScrollbarDrag(event) {
+    if (scrollbarDrag && scrollbarDrag.pointerId === event.pointerId) scrollbarDrag = null;
+  }
+  scrollbar.addEventListener('pointerup', finishScrollbarDrag);
+  scrollbar.addEventListener('pointercancel', finishScrollbarDrag);
+  scrollbar.addEventListener('lostpointercapture', finishScrollbarDrag);
+
+  scrollbar.addEventListener('keydown', event => {
+    const page = toolbar.clientWidth;
+    const step = event.shiftKey ? page : 40;
+    if (event.key === 'ArrowLeft') toolbar.scrollLeft -= step;
+    else if (event.key === 'ArrowRight') toolbar.scrollLeft += step;
+    else if (event.key === 'PageUp') toolbar.scrollLeft -= page;
+    else if (event.key === 'PageDown') toolbar.scrollLeft += page;
+    else if (event.key === 'Home') toolbar.scrollLeft = 0;
+    else if (event.key === 'End') toolbar.scrollLeft = maxScroll();
+    else return;
+    event.preventDefault();
+  });
+
+  toolbar.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || maxScroll() <= 1) return;
+    const target = event.target instanceof Element ? event.target : event.target.parentElement;
+    if (!target || target.closest('button,a,input,select,textarea,[role="button"],[contenteditable="true"],.brand')) return;
+    event.preventDefault();
+    toolbar.setPointerCapture(event.pointerId);
+    toolbarDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, startScroll: toolbar.scrollLeft, moved: false };
+  });
+
+  toolbar.addEventListener('pointermove', event => {
+    if (!toolbarDrag || toolbarDrag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - toolbarDrag.startX;
+    const dy = event.clientY - toolbarDrag.startY;
+    if (!toolbarDrag.moved && Math.abs(dx) < 3) return;
+    if (!toolbarDrag.moved && Math.abs(dy) > Math.abs(dx)) {
+      toolbarDrag = null;
+      return;
+    }
+    toolbarDrag.moved = true;
+    toolbar.classList.add('toolbar-dragging');
+    event.preventDefault();
+    toolbar.scrollLeft = toolbarDrag.startScroll - dx;
+  });
+
+  function finishToolbarDrag(event) {
+    if (!toolbarDrag || toolbarDrag.pointerId !== event.pointerId) return;
+    toolbarDrag = null;
+    toolbar.classList.remove('toolbar-dragging');
+  }
+  toolbar.addEventListener('pointerup', finishToolbarDrag);
+  toolbar.addEventListener('pointercancel', finishToolbarDrag);
+  toolbar.addEventListener('lostpointercapture', finishToolbarDrag);
+})();
+</script>
   <script>
     initResizers(); applyTheme(themes[0]); renderThemes(); renderDemo(); updateHistoryButtons(); drawRulers();
     updateToolButtons(); setStatus('就緒。請匯入 HTML，外觀修改不會自動整合回原工程。');
