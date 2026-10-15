@@ -227,18 +227,24 @@ function safeSelector(selector) {
   return typeof selector === 'string' && selector.length < 4096 && !/[{}<>\u0000]/.test(selector);
 }
 function boostSelector(selector) { return `:is(${selector}):is(:where(*),#vf-specificity-a#vf-specificity-b#vf-specificity-c)`; }
-function cssRules(records, simulate = false) {
+function cssRules(records, simulate = false, staticFallback = false) {
   let css = '';
   const sorted = [...records].sort((a,b) => (a.state === 'default' ? 0 : 1) - (b.state === 'default' ? 0 : 1));
   for (const rec of sorted) {
     if (rec.page !== appearanceSource.page) continue;
     if (simulate && (rec.viewport !== viewportMode || (rec.state !== 'default' && rec.state !== appearanceState))) continue;
+    // An exported file can be opened at a different viewport from the one
+    // used while editing. Keep the current default appearance as a static
+    // base; the responsive media rules below still override it when matched.
+    if (staticFallback && (rec.viewport !== viewportMode || rec.state !== 'default')) continue;
     const selector = rec.scope === 'all-matching' ? rec.matchingSelector : rec.target.selector;
     if (!safeSelector(selector)) continue;
-    const declarations = Object.entries(rec.styles).filter(([k,v]) => safeAppearanceStyle(k,v)).map(([k,v]) => `${k}:${v} !important`).join(';');
+    const declarations = Object.entries(rec.styles)
+      .filter(([k,v]) => (!staticFallback || k === 'background-image' || k === 'background-size' || k === 'background-position' || k === 'background-repeat') && safeAppearanceStyle(k,v))
+      .map(([k,v]) => `${k}:${v} !important`).join(';');
     if (!declarations) continue;
     const rule = `${simulate ? selector : stateSelector(boostSelector(selector),rec.state)}{${declarations}}`;
-    css += simulate ? rule + '\n' : `@media (${rec.viewport === 'mobile' ? 'max-width:700px' : 'min-width:701px'}){${rule}}\n`;
+    css += simulate || staticFallback ? rule + '\n' : `@media (${rec.viewport === 'mobile' ? 'max-width:700px' : 'min-width:701px'}){${rule}}\n`;
   }
   return css;
 }
@@ -427,7 +433,12 @@ function buildAppearanceHtml() {
     if(!baseline) {baseline=doc.createElement('style');baseline.id='vf-appearance-inline-baseline';doc.head.appendChild(baseline);}
     baseline.textContent+=inlineFallback.replace(/</g,'\\3c ');
   }
-  const style = doc.createElement('style'); style.id = 'vf-appearance-styles'; style.textContent = cssRules(Object.values(appearanceRecords)).replace(/</g,'\\3c '); doc.head.appendChild(style);
+  const style = doc.createElement('style'); style.id = 'vf-appearance-styles';
+  const records = Object.values(appearanceRecords);
+  // Keep the edited viewport visible even if this file is opened on another
+  // screen size; matching responsive rules remain below and take precedence.
+  style.textContent = (cssRules(records, false, true) + cssRules(records)).replace(/</g,'\\3c ');
+  doc.head.appendChild(style);
   const metadata = doc.createElement('script'); metadata.type = 'application/json'; metadata.id = 'visionflow-appearance-data';
   metadata.textContent = JSON.stringify(collectAppearanceData(),null,2).replace(/</g,'\\u003c'); doc.body.appendChild(metadata);
   const marker = doc.createElement('meta'); marker.name='visionflow-preview'; marker.content='Static appearance reference; not original source; scripts disabled.'; doc.head.appendChild(marker);
