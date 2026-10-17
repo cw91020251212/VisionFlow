@@ -48,7 +48,7 @@
 
 基線第四批 `6351f26affc283ca65ea1a91af66fcc1f865a027`；新分支 `feat/background-textures`，以第四批為PR base，包含四批修復。保留四批獨立預覽及正式 main；本增補不合併或替換正式 GitHub Pages。
 
-[背景貼圖獨立臨時預覽](https://8770-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)，不是正式Pages。與原四批預覽草稿不共用，請先匯出舊設計再於此處匯入。
+背景貼圖使用獨立臨時預覽，並非正式 Pages。它與原四批預覽草稿不共用；匯入舊設計前，請先匯出備份，再於相應預覽中匯入。
 
 ## 已保存的交付位置
 

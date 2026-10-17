@@ -41,6 +41,6 @@ Firefox、Safari、Windows／Android系統分享面板及真實手機全套人�
 第四批程式提交：`330d42fe7c5aa1e59fe0e7372569256944fe258f`。已上傳分支並核對 PR head與遠端相同，PR仍為OPEN、未合併。
 
 - [第四批 GitHub PR #4](https://github.com/cw91020251212/VisionFlow/pull/4)，base為第三批分支。
-- [第四批獨立臨時預覽](https://8769-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer/)，不是正式 GitHub Pages。
+- 第四批使用獨立臨時預覽，並非正式 GitHub Pages。
 
 已驗證本機及公開預覽 HTTP 200、應用檔案位元內容、相對manifest及路由；`.git/config`、`.env`和測試目錄回傳404，未暴露原始儲存庫或本機設定。既有三批預覽及正式main未替換。最後的文件提交僅補上驗證紀錄，不改動已通過119項回歸的應用程式。

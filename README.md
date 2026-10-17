@@ -121,7 +121,7 @@ npm test
 
 需有 Python 3 供測試啟動本地靜態伺服器。測試涵蓋普通按鈕、原有漸層／陰影卡片、輸入框、連結、重複列表、手機換行與 JS 生成元素，另有資料夾、直接 file:// 開啟、复杂样式、來源切換、刷新、重新匯入、JSON、脚本排除及原事件保護。
 
-維護 PWA 時，每次修改應用檔案須同步更新 `sw.js` 的 `APP_VERSION`、HTML的`visionflow-app-version`及全部JS的`?v=`參數，並將新增啟動資源加入 `APP_FILES`；版本字串不可重用，避免取消SW後仍命中舊HTTP脚本。完整套件先安裝成功才更新，缺檔不擾動前版。`window.history` 是瀏覽器 History API；全局 `history` 是編輯器撤銷陣列，勿混用。這個修復副本沒有獨立的 Manus 專案診斷綁定，採用既有 `npm run check` 及 Playwright，而非借用 FormLab 的 TypeScript 診斷。`maintenanceStoragePaused`只在資料清理／導航階段阻止保存，不能把出廠刪除的舊資料在pagehide寫回。
+維護 PWA 時，每次修改應用檔案須同步更新 `sw.js` 的 `APP_VERSION`、HTML的`visionflow-app-version`及全部JS的`?v=`參數，並將新增啟動資源加入 `APP_FILES`；版本字串不可重用，避免取消SW後仍命中舊HTTP脚本。完整套件先安裝成功才更新，缺檔不擾動前版。`window.history` 是瀏覽器 History API；全局 `history` 是編輯器撤銷陣列，勿混用。驗證使用專案既有的 `npm run check` 與 Playwright。`maintenanceStoragePaused`只在資料清理／導航階段阻止保存，不能把出廠刪除的舊資料在pagehide寫回。
 
 原生分享能力依據：[MDN Navigator.share](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share)。離線更新生命週期：[MDN Using Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)。Chromium 回歸使用原生 Service Worker；分享接收者用 API 替身測試，不等於 Windows／Android 分享面板的完整人工驗收。
 

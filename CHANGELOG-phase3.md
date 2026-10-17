@@ -39,11 +39,7 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm test
 
 ## 预览与数据注意
 
-第三批独立临时预览：
-
-https://8768-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer
-
-这是当前工作环境的临时预览，不是正式发布，环境停止后可能不可用。预览仅放14个公开应用文件，不提供 Git、测试、配置或本机目录。第三批包含前两批；前两批预览继续保留。
+第三批曾使用独立临时预览（非正式发布，环境停止后可能不可用）。该预览仅提供14个公开应用文件，不提供 Git、测试、配置或本机目录。第三批包含前两批；前两批预览彼此独立。
 
 导入自己信任的HTML或测试副本，先下载草稿／外观备份；不同预览来源与正式站点的localStorage独立，不会自动迁移正式浏览器设计。主要使用方式以电脑鼠标键盘为准。
 
@@ -54,4 +50,4 @@ https://8768-ig0t4iybxb8dlbriv55cb-84142f63.sg2.manus.computer
 - 第三批 PR：[VisionFlow #3](https://github.com/cw91020251212/VisionFlow/pull/3)，base 为第二批修复分支，不是 main。
 - 通过完整回归的代码提交：`4212ef1`。随后只追加本交付信息，不改变应用程序。
 - 修复源码：[第三批分支](https://github.com/cw91020251212/VisionFlow/tree/fix/phase3-pointer-geometry)。
-- 正式 GitHub Pages 尚未替换；请先用上方第三批独立临时预览。合并需按第一批 → 第二批 → 第三批依赖顺序处理。
+- 正式 GitHub Pages 尚未替换；合并需按第一批 → 第二批 → 第三批依赖顺序处理。
